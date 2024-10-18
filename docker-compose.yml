@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  ide:
+    container_name: ${PROJECT_NAME:-codedev}_devcontainer
+    hostname: ${PROJECT_NAME:-codedev}_devcontainer
+    image: codedev:latest
+    networks:
+      - devcontainers_network
+      - ${PROJECT_NETWORK:-devcontainers_network}
+      - traefik-proxy
+    expose:
+      - 6006  # Storybook
+      - 8080  # Frontend
+      - 8000  # Backend
+      - 9229  # Node.js debugging
+      - 5173  # Vite
+    ports:
+      - "${FRONTEND_PORT:-6560}:8080"
+      - "${BACKEND_PORT:-6570}:8000"
+      - "9229:9229"
+      - "5173:5173"
+      - "6006:6006"
+    volumes:
+      - /share/DevelopmentProjects:/share/DevelopmentProjects
+      - ${PROJECT_ROOT}:/workspace
+      - /share/DevelopmentProjects/.devcontainer/.bashrc:/home/joe/.bashrc
+      - ${PROJECT_ROOT}/.devcontainer/update_dependencies.sh:/home/joe/update_dependencies.sh
+      - ssh-keys:/home/joe/.ssh
+    env_file:
+      - dockervariables.env
+      - ../.env
+    dns:
+      - 192.168.2.1
+    command: ["/bin/bash", "-c", "/home/joe/update_dependencies.sh && /bin/bash"]
+
+volumes:
+  ssh-keys:
+    driver: local
+
+networks:
+  devcontainers_network:
+    external: true
+  traefik-proxy:
+    external: true
+  magmabi-fullstack-network:    
+    external: true
