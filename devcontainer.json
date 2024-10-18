@@ -2,7 +2,7 @@
     "name": "CoDemian Dev Container",
     "dockerComposeFile": [
         "docker-compose.yml",
-        "docker-compose.override.yml"
+        "../docker-compose-devcontainer.yml"
     ],
     "service": "ide",
     "workspaceFolder": "/workspace",
@@ -15,8 +15,8 @@
             "codezombiech.gitignore",
             "cweijan.dbclient-jdbc",
             "cweijan.vscode-postgresql-client2",
+            "davidanson.vscode-markdownlint",
             "dbaeumer.vscode-eslint",
-            "donjayamanne.git-extension-pack",
             "donjayamanne.githistory",
             "donjayamanne.python-environment-manager",
             "donjayamanne.python-extension-pack",
@@ -53,11 +53,12 @@
             "njpwerner.autodocstring",
             "postman.postman-for-vscode",
             "rvest.vs-code-prettier-eslint",
+            "shd101wyy.markdown-preview-enhanced",
             "sourcegraph.cody-ai",
             "visualstudioexptteam.intellicode-api-usage-examples",
             "visualstudioexptteam.vscodeintellicode",
             "wholroyd.jinja",
-            "ziyasal.vscode-open-in-github"]
+            "yzhang.markdown-all-in-one"]
             ,
             "settings": {
                 "python.envFile": "${workspaceFolder}/${relativeFileDirname}/.env",
@@ -76,6 +77,7 @@
     "remoteEnv": {
         "PROJECT_ROOT": "${localWorkspaceFolder}"
     },
-    "postCreateCommand": "sh -c 'if [ ! -L .devcontainer/docker-compose.yml ]; then /share/DevelopmentProjects/.devcontainer/devcontainerlinks.sh /workspace; fi && sh .devcontainer/setup-ssh.sh && sh .devcontainer/setup_poetry.sh && sh .devcontainer/setup_pnpm.sh'",
+    // "postCreateCommand": "sh -c 'if [ ! -L .devcontainer/docker-compose.yml ]; then /share/DevelopmentProjects/.devcontainer/devcontainerlinks.sh /workspace; fi && sh .devcontainer/setup-ssh.sh && sh .devcontainer/setup_poetry.sh && sh .devcontainer/setup_pnpm.sh'",
+    "postCreateCommand": "sh -c 'sh .devcontainer/setup-ssh.sh && sh .devcontainer/setup_poetry.sh && sh .devcontainer/setup_pnpm.sh'",
     "remoteUser": "joe"
 }

@@ -2,6 +2,10 @@
 
 # This script creates symbolic links for the .devcontainer directory
 
+###################################################################
+### NO LONGER USED SINCE DEV CONTAINER IS NOW MANAGED USING GIT ###
+###################################################################
+
 # Check if target directory is provided
 if [ -z "$1" ]; then
   echo "Usage: $0 <target_directory>"

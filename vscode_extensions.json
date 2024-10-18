@@ -5,8 +5,8 @@
 "codezombiech.gitignore",
 "cweijan.dbclient-jdbc",
 "cweijan.vscode-postgresql-client2",
+"davidanson.vscode-markdownlint",
 "dbaeumer.vscode-eslint",
-"donjayamanne.git-extension-pack",
 "donjayamanne.githistory",
 "donjayamanne.python-environment-manager",
 "donjayamanne.python-extension-pack",
@@ -43,8 +43,9 @@
 "njpwerner.autodocstring",
 "postman.postman-for-vscode",
 "rvest.vs-code-prettier-eslint",
+"shd101wyy.markdown-preview-enhanced",
 "sourcegraph.cody-ai",
 "visualstudioexptteam.intellicode-api-usage-examples",
 "visualstudioexptteam.vscodeintellicode",
 "wholroyd.jinja",
-"ziyasal.vscode-open-in-github"]
+"yzhang.markdown-all-in-one"]
