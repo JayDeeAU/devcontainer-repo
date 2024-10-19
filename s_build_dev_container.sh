@@ -4,7 +4,7 @@
 SSH_HOST=$DOCKER_HOST
 WORKSPACE=/share/DevelopmentProjects/MagmaBI-Full
 
-EXEC_CMD_BUILD="cd $WORKSPACE/.devcontainer &&  docker build --pull --rm -f 'Dockerfile' -t codedev:latest '.'"
+EXEC_CMD_BUILD="cd $WORKSPACE/.devcontainer &&  docker build --pull --rm -f 'Dockerfile' -t codem_devcontainer:latest '.'"
 
 # Execute commands on the remote server using ssh
 echo "Running command on $SSH_HOST: $EXEC_CMD_BUILD"

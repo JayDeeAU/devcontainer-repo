@@ -14,8 +14,7 @@
             "christian-kohler.npm-intellisense",
             "codezombiech.gitignore",
             "cweijan.dbclient-jdbc",
-            "cweijan.vscode-postgresql-client2",
-            "davidanson.vscode-markdownlint",
+            "cweijan.vscode-postgresql-client2",            
             "dbaeumer.vscode-eslint",
             "donjayamanne.githistory",
             "donjayamanne.python-environment-manager",
@@ -74,9 +73,9 @@
             }
         }
     },
-    "remoteEnv": {
-        "PROJECT_ROOT": "${localWorkspaceFolder}"
-    },
+    // "remoteEnv": {
+    //     "PROJECT_ROOT": "${workspaceFolder}/.env.devcontainer"
+    // },
     // "postCreateCommand": "sh -c 'if [ ! -L .devcontainer/docker-compose.yml ]; then /share/DevelopmentProjects/.devcontainer/devcontainerlinks.sh /workspace; fi && sh .devcontainer/setup-ssh.sh && sh .devcontainer/setup_poetry.sh && sh .devcontainer/setup_pnpm.sh'",
     "postCreateCommand": "sh -c 'sh .devcontainer/setup-ssh.sh && sh .devcontainer/setup_poetry.sh && sh .devcontainer/setup_pnpm.sh'",
     "remoteUser": "joe"

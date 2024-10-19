@@ -1,13 +1,13 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   ide:
-    container_name: ${PROJECT_NAME:-codedev}_devcontainer
-    hostname: ${PROJECT_NAME:-codedev}_devcontainer
-    image: codedev:latest
+    container_name: ${PROJECT_NAME}_devcontainer
+    hostname: ${PROJECT_NAME}_devcontainer
+    image: codem_devcontainer:latest
     networks:
       - devcontainers_network
-      - ${PROJECT_NETWORK:-devcontainers_network}
+      - ${PROJECT_NETWORK}
       - traefik-proxy
     expose:
       - 6006  # Storybook
@@ -24,12 +24,12 @@ services:
     volumes:
       - /share/DevelopmentProjects:/share/DevelopmentProjects
       - ${PROJECT_ROOT}:/workspace
-      - /share/DevelopmentProjects/.devcontainer/.bashrc:/home/joe/.bashrc
+      - ${PROJECT_ROOT}/.devcontainer/.bashrc:/home/joe/.bashrc
       - ${PROJECT_ROOT}/.devcontainer/update_dependencies.sh:/home/joe/update_dependencies.sh
       - ssh-keys:/home/joe/.ssh
     env_file:
       - dockervariables.env
-      - ../.env
+      # - ../.env
     dns:
       - 192.168.2.1
     command: ["/bin/bash", "-c", "/home/joe/update_dependencies.sh && /bin/bash"]
@@ -43,5 +43,6 @@ networks:
     external: true
   traefik-proxy:
     external: true
-  magmabi-fullstack-network:    
+  # ${PROJECT_NETWORK}: this didn't work - had to hardcode it (change for each project)
+  magmabi-fullstack-network:
     external: true
