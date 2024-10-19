@@ -4,26 +4,24 @@ This framework provides a flexible and reusable development environment using Vi
 
 ## Table of Contents
 
-- [CoDemian Dev Container Framework 🚀](#codemian-dev-container-framework-)
-  - [Table of Contents](#table-of-contents)
-  - [1. Directory Structure 📁](-#1-directory-structure-📁)
-  - [2. Key Components 🔑](-#2-key-components-🔑)
-  - [3. How It Works ⚙️](-#3-how-it-works-⚙️)
-  - [4. Setting Up a New Project 🆕](-#4-setting-up-a-new-project-🆕)
-    - [Environment Variables](-#envirnment-variables)
-  - [5. Setting Up DevContainer as a Submodule 🔗](-#5-setting-up-devcontainer-as-a-submodule-🔗)
-    - [Cloning a Project with Submodules](#cloning-a-project-with-submodules)
-    - [Updating the DevContainer Submodule](#updating-the-devcontainer-submodule)
-    - [Troubleshooting Submodule Setup](#troubleshooting-submodule-setup)
-  - [6. Adding New Components ➕](-#6-adding-new-components-➕)
-    - [A. Adding a New Python Component](#a-adding-a-new-python-component)
-    - [B. Adding a New Next.js Frontend Component](#b-adding-a-new-nextjs-frontend-component)
-  - [7. Customizing a Project 🎨](-#7-customizing-a-project-🎨)
-  - [8. Updating the Shared Configuration 🔄](-#8-updating-the-shared-configuration-🔄)
-  - [9. Virtual Environments 🐍](-#9-virtual-environments-🐍)
-  - [10. Best Practices 👍](-#10-best-practices-👍)
-  - [11. Troubleshooting 🔧](-#11-troubleshooting-🔧)
-  - [12. Contributing 🤝](-#12-contributing-🤝)
+- 1 [Directory Structure 📁](#1-directory-structure-📁)
+- 2 [Key Components 🔑](#2-key-components-🔑)
+- 3 [How It Works ⚙️](#3-how-it-works-️⚙️)
+- 4 [Setting Up a New Project 🆕](#4-setting-up-a-new-project-🆕)
+  - [Environment Variables](#environment-variables)
+- 5 [Setting Up DevContainer as a Submodule 🔗](#5-setting-up-devcontainer-as-a-submodule-🔗)
+  - [Cloning a Project with Submodules](#cloning-a-project-with-submodules)
+  - [Updating the DevContainer Submodule](#updating-the-devcontainer-submodule)
+  - [Troubleshooting Submodule Setup](#troubleshooting-submodule-setup)
+- 6 [Adding New Components ➕](#6-adding-new-components-➕)
+  - A [Adding a New Python Component](#a-adding-a-new-python-component)
+  - B [Adding a New Next.js Frontend Component](#b-adding-a-new-nextjs-frontend-component)
+- 7 [Customizing a Project 🎨](#7-customizing-a-project-🎨)
+- 8 [Updating the Shared Configuration 🔄](#8-updating-the-shared-configuration-🔄)
+- 9 [Virtual Environments 🐍](#9-virtual-environments-🐍)
+- 10 [Best Practices 👍](#10-best-practices-👍)
+- 11 [Troubleshooting 🔧](#11-troubleshooting-🔧)
+- 12 [Contributing 🤝](#12-contributing-🤝)
 
 ## 1. Directory Structure 📁
 
@@ -48,15 +46,15 @@ This framework provides a flexible and reusable development environment using Vi
 
 ## 2. Key Components 🔑
 
-- **Dockerfile**: Defines the base development environment with Python, Node.js, and various tools.
-- **docker-compose.yml**: Configures the dev container service and its dependencies.
-- **devcontainer.json**: Specifies VS Code settings and extensions for the dev container.
-- **setup-ssh.sh**: Sets up SSH keys for the container user.
-- **setup-poetry.sh**: Configures Poetry and installs Python dependencies for each component.
-- **setup-pnpm.sh**: Sets up `pnpm` and installs JavaScript dependencies for each component.
-- **devcontainerlinks.sh**: Legacy script for creating symlinks (now replaced by Git submodule configuration).
-- **init-project.sh**: Initializes a new project with the dev container setup.
-- **update_dependencies.sh**: Updates dependencies for both Python and JavaScript components.
+- **`Dockerfile`**: Defines the base development environment with Python, Node.js, and various tools.
+- **`docker-compose.yml`**: Configures the dev container service and its dependencies.
+- **`devcontainer.json`**: Specifies VS Code settings and extensions for the dev container.
+- **`setup-ssh.sh`**: Sets up SSH keys for the container user.
+- **`setup-poetry.sh`**: Configures Poetry and installs Python dependencies for each component.
+- **`setup-pnpm.sh`**: Sets up `pnpm` and installs JavaScript dependencies for each component.
+- **`devcontainerlinks.sh`**: Legacy script for creating symlinks (now replaced by Git submodule configuration).
+- **`init-project.sh`**: Initializes a new project with the dev container setup.
+- **`update_dependencies.sh`**: Updates dependencies for both Python and JavaScript components.
 
 ## 3. How It Works ⚙️
 
@@ -81,8 +79,8 @@ This framework provides a flexible and reusable development environment using Vi
 
 This setup uses two environment files:
 
-1. **/share/DevelopmentProjects/.devcontainer/dockervariables.env**: Contains shared default settings.
-2. **[PROJECT_ROOT]/.env**: Contains project-specific settings and overrides.
+1. `/share/DevelopmentProjects/.devcontainer/dockervariables.env`: Contains shared default settings.
+2. `[PROJECT_ROOT]/.env`: Contains project-specific settings and overrides.
 
 When setting up a new project, create a `.env` file in your project root with the necessary overrides. See the sample `.env` file in this README for an example.
 
@@ -275,8 +273,8 @@ services:
 
 To update the shared configuration for all projects:
 
-1. Edit the desired file** in `/share/DevelopmentProjects/.devcontainer/`.
-2. Rebuild the dev containers** for all projects to apply the changes.
+1. Edit the desired file in `/share/DevelopmentProjects/.devcontainer/`.
+2. Rebuild the dev containers for all projects to apply the changes.
 
 ## 9. Virtual Environments 🐍
 
@@ -286,41 +284,36 @@ This dev container setup creates separate virtual environments for each Python c
 
 - To activate a virtual environment in the terminal:  
 
-    1. Navigate to the component's directory:
+  1. Navigate to the component's directory:
+     ```sh
+     cd /workspace/your_component
+     ```
 
-   ```sh
-      cd /workspace/your_component
-   ```
-
-    1. Activate the virtual environment:
-
-   ```sh
+  2. Activate the virtual environment:
+     ```sh
      source .venv/bin/activate
-   ```
+     ```
 
 - To deactivate the virtual environment:
-
-   ```sh
+  ```sh
   deactivate
-   ```
+  ```
 
 - To install new dependencies:
   
   1. Ensure you're in the correct component directory.
   2. Use Poetry to add the dependency:
-
-   ```sh
+     ```sh
      poetry add package_name
-   ```
+     ```
 
 - To update dependencies:
   
   1. Ensure you're in the correct component directory.
   2. Use Poetry to update:
-
-   ```sh
+     ```sh
      poetry update
-   ```
+     ```
 
 Remember, each Python component (directory with a `pyproject.toml` file) has its own virtual environment.
 
