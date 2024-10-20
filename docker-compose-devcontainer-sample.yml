@@ -1,0 +1,25 @@
+# This is a sample docker-compose-devcontainer.yml that needs to exist in your project root directory
+# It is referenced from this devcontainer's docker-compose.yml (defined in devcontainer.json)
+# It must exist in your project root directory as docker-compose-devcontainer.yml (without "-sample" in the filename !)
+
+services:
+  ide:
+    volumes:      
+      - ${PROJECT_ROOT}/backend/data_providers/data_provider_caches:/data_provider_caches
+      - ${PROJECT_ROOT}/backend-prod/data_providers/.access_tokens:/app/data_providers/.access_tokens
+      - ${PROJECT_ROOT}/logs:/app/logs
+    networks:
+      - redis_admin_network
+      - magmabi-fullstack-network-dev
+      - magmabi-fullstack-network-prod
+    env_file:
+    # NOTE - context reference to parent directory because this docker-compose-devcontainer is called from .devcontainer
+      - ../docker-compose.env
+
+networks:
+  redis_admin_network:
+    external: {}
+  magmabi-fullstack-network-dev: 
+    external: {}
+  magmabi-fullstack-network-prod: 
+    external: {}

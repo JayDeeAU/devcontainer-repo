@@ -65,7 +65,7 @@
                 "python.analysis.extraPaths": [
                     "${workspaceFolder}/${relativeFileDirname}/.venv/lib/python3.12/site-packages"
                 ],
-                "python.formatting.provider": "black",
+                //"python.formatting.provider": "black",
                 "python.testing.pytestEnabled": true,
                 "python.analysis.diagnosticSeverityOverrides": {
                     "reportMissingImports": "none"

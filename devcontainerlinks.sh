@@ -31,7 +31,7 @@ for item in "$SOURCE_DIR"/*; do
   item_name="$(basename "$item")"
 
   # Skip the . and .. entries, and docker-compose.override.yml
-  if [ "$item_name" = "." ] || [ "$item_name" = ".." ] || [ "$item_name" = "docker-compose.override.yml" ]; then
+  if [ "$item_name" = "." ] || [ "$item_name" = ".." ] || [ "$item_name" = "docker-compose-devcontainer.yml" ]; then
     continue
   fi
   
@@ -46,9 +46,9 @@ for item in "$SOURCE_DIR"/*; do
 done
 
 # Create an empty docker-compose.override.yml if it doesn't exist
-if [ ! -f "$TARGET_SUBDIR/docker-compose.override.yml" ]; then
-  touch "$TARGET_SUBDIR/docker-compose.override.yml"
-  echo "Created empty docker-compose.override.yml"
+if [ ! -f "$TARGET_SUBDIR/docker-compose-devcontainer.yml" ]; then
+  touch "$TARGET_SUBDIR/docker-compose-devcontainer.yml"
+  echo "Created empty docker-compose-devcontainer.yml"
 fi
 
 echo "All symbolic links processed."

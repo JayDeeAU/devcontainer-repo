@@ -139,27 +139,33 @@ export PROMPT_DIRTRIM=4
 alias pbcopy='xclip -selection clipboard'
 alias pbpaste='xclip -selection clipboard -o'
 #
-alias dsu='/workspace/s_start_services.sh'
-alias dsup='/workspace/s_start_services_prod.sh'
-alias dsub='/workspace/s_start_services_debug.sh'
-#
-alias dsd='/workspace/s_stop_services.sh'
-alias dsdp='/workspace/s_stop_services_prod.sh'
-alias dsdb='/workspace/s_stop_services_debug.sh'
-#
-alias dbf='/workspace/s_build_frontend.sh'
-alias dbb='/workspace/s_build_backend.sh'
-alias dbfp='/workspace/s_build_frontend_prod.sh'
-alias dbbp='/workspace/s_build_backend_prod.sh'
-alias dbdc='/workspace/s_build_dev_container.sh'
-#
-alias refast='clear && /workspace/s_restart_fastapi.sh && sleep 3 && docker attach magmabi-full_backend &'
-alias refastp='/workspace/s_restart_fastapi_prod.sh'
-alias refastb='/workspace/s_restart_fastapi_debug.sh'
+# Deploy aliases
+alias ddy='/workspace/s_deploy_services.sh dev'
+alias ddyp='/workspace/s_deploy_services.sh prod'
+
+# Manage services aliases
+alias dsu='/workspace/s_manage_services.sh restart dev'
+alias dsup='/workspace/s_manage_services.sh restart prod'
+alias dsd='/workspace/s_manage_services.sh stop dev'
+alias dsdp='/workspace/s_manage_services.sh stop prod'
+alias refast='/workspace/s_manage_services.sh restart dev backend celery_worker celery_beat celery_flower && sleep 3 && docker logs magmabi-full_backend-dev &'
+alias refastp='/workspace/s_manage_services.sh restart prod backend celery_worker celery_beat celery_flower && sleep 3 && docker logs magmabi-full_backend-prod &'
+alias dlogs='/workspace/s_manage_services.sh logs dev'
+alias dlogsp='/workspace/s_manage_services.sh logs prod'
+
+# Build aliases
+alias dbf='/workspace/s_build_frontend.sh dev'
+alias dbb='/workspace/s_build_backend.sh dev'
+alias dbfp='/workspace/s_build_frontend.sh prod'
+alias dbbp='/workspace/s_build_backend.sh prod'
+alias dba='/workspace/s_build_all.sh dev'
+alias dbap='/workspace/s_build_all.sh prod'
+alias dbdc='/workspace/.devcontainer/s_build_dev_container.sh'
 #
 alias qnap='ssh -o StrictHostKeyChecking=no $DOCKER_HOST'
-alias lsloginp='docker exec -it magmabi-full_backend-prod python -m data_providers.lightspeed_data_provider'
+alias lsloginp='docker exec -it magmabi-full_backend-dev python -m data_providers.lightspeed.lightspeed_data_provider'
 alias openapispec='/workspace/s_generate_openapi_spec.sh'
+
 # pnpm
 export PNPM_HOME="/home/joe/.local/share/pnpm"
 export PATH="/home/joe/.local/bin:$PATH:./"
@@ -168,5 +174,3 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
-
-#source '/home/joe/.bash_completions/openapi-python-client.sh'
