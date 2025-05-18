@@ -1,4 +1,3 @@
-  set -e
   # History settings
   HISTSIZE=200
   SAVEHIST=400
