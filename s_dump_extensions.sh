@@ -6,7 +6,7 @@ command_exists() {
 }
 
 # Check if code command is available
-if ! command_exists code; then
+if ! command_exists code-insiders; then
     echo "Error: VS Code CLI (code) is not available. Make sure VS Code is installed and in your PATH." >&2
     exit 1
 fi
@@ -15,6 +15,6 @@ fi
 extensions=$(code --list-extensions | tail -n +2 | sed 's/.*/"&",/' | sed '$ s/,$//')
 
 # Save to file
-echo "[$extensions]" > /workspace/.devcontainer/vscode_extensions.json
+echo "[$extensions]" > ./vscode_extensions.json
 
 echo "Extensions list has been saved to .devcontainer/vscode_extensions.json"

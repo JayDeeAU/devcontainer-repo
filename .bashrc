@@ -66,7 +66,8 @@ unset color_prompt force_color_prompt
 # If this is an xterm set the title to user@host:dir
 case "$TERM" in
 xterm*|rxvt*)
-    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    #PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    echo "Setting Prompt"
     ;;
 *)
     ;;
@@ -163,8 +164,28 @@ alias dbap='/workspace/s_build_all.sh prod'
 alias dbdc='/workspace/.devcontainer/s_build_dev_container.sh'
 #
 alias qnap='ssh -o StrictHostKeyChecking=no $DOCKER_HOST'
-alias lsloginp='docker exec -it magmabi-full_backend-dev python -m data_providers.lightspeed.lightspeed_data_provider'
+alias lsloginp='docker exec -it magmabi-full_backend-dev python -m data_providers.lightspeed.lightspeed_api'
 alias openapispec='/workspace/s_generate_openapi_spec.sh'
+
+docker_stats() {
+    if [ -n "$1" ]; then
+        # If a pattern is provided, find matching containers
+        containers=$(docker ps -a --filter "name=$1" --format "{{.Names}}" | tr '\n' ' ')
+
+        if [ -n "$containers" ]; then
+            # Use eval to pass each container as a separate argument to docker stats
+            eval "docker stats $containers"
+        else
+            echo "No matching containers found"
+        fi
+    else
+        # If no pattern is provided, show stats for all running containers
+        docker stats
+    fi
+}
+
+alias dstatsp="docker_stats prod"
+alias dstats="docker_stats magmabi-full"
 
 # pnpm
 export PNPM_HOME="/home/joe/.local/share/pnpm"
@@ -174,3 +195,4 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
+eval "$(oh-my-posh init bash --config /home/joe/.cache/oh-my-posh/themes/clean-detailed.omp.json)"
