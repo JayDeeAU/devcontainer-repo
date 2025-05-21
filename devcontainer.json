@@ -52,11 +52,11 @@
                 "wholroyd.jinja",
                 "yzhang.markdown-all-in-one"],
             "settings": {
-                "python.envFile": "${workspaceFolder}/${relativeFileDirname}/.env",
-                "python.defaultInterpreterPath": "${workspaceFolder}/${relativeFileDirname}/.venv/bin/python",
-                "python.analysis.extraPaths": [
-                    "${workspaceFolder}/${relativeFileDirname}/.venv/lib/python3.12/site-packages"
-                ],
+                //"python.envFile": "${workspaceFolder}/${relativeFileDirname}/.env",
+                //"python.defaultInterpreterPath": "${workspaceFolder}/${relativeFileDirname}/.venv/bin/python",
+                //"python.analysis.extraPaths": [
+                //    "${workspaceFolder}/${relativeFileDirname}/.venv/lib/python3.12/site-packages"
+                //],
                 "python.testing.pytestEnabled": true,
                 "python.analysis.diagnosticSeverityOverrides": {
                     "reportMissingImports": "none"

@@ -1,0 +1,21 @@
+[project]
+name = "devcontainer"
+version = "0.1.0"
+description = "Dev Container Management for Python Projects"
+package-mode = false
+authors = [
+    {name = "Joe Demian",email = "joe.demian@outlook.com"}
+]
+# readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "detect-secrets (>=1.5.0,<2.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "devcontainer"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
