@@ -1,0 +1,3 @@
+[submodule "secrets-scanner"]
+	path = secrets-scanner
+	url = git@github.com:JayDeeAU/secrets-scanner.git
