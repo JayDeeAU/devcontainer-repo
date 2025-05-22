@@ -6,6 +6,7 @@
     ],    
     "service": "ide",
     "workspaceFolder": "/workspace",
+    "userEnvProbe": "interactiveShell",
     "customizations": {
         "vscode": {
             "extensions": 

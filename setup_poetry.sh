@@ -1,63 +1,68 @@
 #!/bin/bash
+set -euo pipefail
 
-# This script sets up Poetry and creates virtual environments for Python components
+# Basic error handling
+trap 'echo "❌ Script failed at line $LINENO"' ERR
 
-# Function to set up Poetry for a specific directory
-setup_poetry_for_dir() {
-    local dir=$1
-    if [ -d "$dir" ] && [ -f "$dir/pyproject.toml" ]; then
-        echo "Setting up Poetry for $dir"
-        
-        # Change to the project directory
-        cd "$dir"
-        
-        # Configure Poetry to create the virtual environment in the project directory
-        poetry config virtualenvs.in-project true --local
-        
-        # Create the virtual environment if it doesn't exist
-        if [ ! -d ".venv" ]; then
-            echo "Creating virtual environment for $dir"
-            poetry env use python3
-        fi
+# Check prerequisites
+check_requirements() {
+    command -v poetry >/dev/null || { echo "❌ Poetry not found"; exit 1; }
+    command -v python3 >/dev/null || { echo "❌ Python3 not found"; exit 1; }
+    [[ -d "/workspace" ]] || { echo "❌ Workspace not found"; exit 1; }
+}
 
-        # Update the .env file with the current virtual environment path
-        echo "PYTHON_VENV=$(poetry env info --path)" > .env
-        
-        # Install dependencies
-        poetry install
-        
-        # Create a script to activate the virtual environment
-        echo "#!/bin/bash
-        source .venv/bin/activate" > activate_venv.sh
-        chmod +x activate_venv.sh
-        
-        echo "Virtual environment created and dependencies installed for $dir"
-        
-        # Change back to the original directory
-        cd - > /dev/null
+# Setup single component with error handling
+setup_component() {
+    local dir="$1"
+    local name=$(basename "$dir")
+    
+    echo "🔧 Setting up: $name"
+    
+    cd "$dir" || return 1
+    
+    # Validate pyproject.toml
+    [[ -f "pyproject.toml" ]] || { echo "⚠️  No pyproject.toml in $name"; return 1; }
+    grep -q "\[tool.poetry\]" pyproject.toml || { echo "⚠️  Not a Poetry project: $name"; return 1; }
+    
+    # Configure Poetry
+    poetry config virtualenvs.in-project true --local || return 1
+    
+    # Clean existing broken venv
+    if [[ -d ".venv" ]] && ! poetry env info &>/dev/null; then
+        echo "🧹 Cleaning corrupted venv for $name"
+        rm -rf .venv
+    fi
+    
+    # Install with timeout
+    echo "📦 Installing dependencies for $name..."
+    timeout 600 poetry install || {
+        echo "❌ Failed to install $name"
+        return 1
+    }
+    
+    echo "✅ Completed: $name"
+    cd - >/dev/null
+}
+
+# Main execution
+main() {
+    echo "🐍 Starting Poetry monorepo setup"
+    
+    check_requirements
+    
+    # Find and process components
+    local failed=0
+    while IFS= read -r -d '' toml_file; do
+        component_dir=$(dirname "$toml_file")
+        setup_component "$component_dir" || ((failed++))
+    done < <(find /workspace -name "pyproject.toml" -type f -print0 2>/dev/null)
+    
+    if [[ $failed -eq 0 ]]; then
+        echo "🎉 All components configured successfully!"
     else
-        echo "Skipping Poetry setup for $dir (directory not found or no pyproject.toml)"
+        echo "⚠️  $failed component(s) failed"
+        exit 1
     fi
 }
-# Main project directory
-PROJECT_DIR="/workspace"
 
-# Find all directories containing a pyproject.toml file
-echo "Finding Python components with pyproject.toml files..."
-PYTHON_COMPONENTS=$(find "$PROJECT_DIR" -maxdepth 2 -mindepth 2 -name pyproject.toml -exec dirname {} \; 2>/dev/null)
-echo "Found Python components:"
-echo "$PYTHON_COMPONENTS"
-echo "-------------------------"
-
-
-if [ -z "$PYTHON_COMPONENTS" ]; then
-    echo "No Python components found with pyproject.toml files."
-    exit 0
-fi
-
-# Set up Poetry for each component
-for component in $PYTHON_COMPONENTS; do
-    setup_poetry_for_dir "$component"
-done
-
-echo "Poetry setup completed for all Python components."
+main "$@"
