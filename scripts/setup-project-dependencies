@@ -6,10 +6,12 @@ set -e
 
 echo "🚀 Setting up project dependencies..."
 
+# Ensure Poetry is in PATH for joe user
+export PATH="/home/joe/.local/bin:$PATH"
+
 # Poetry setup (if pyproject.toml exists)
 if [ -f "pyproject.toml" ]; then
     echo "🐍 Setting up Poetry project..."
-    export PATH="/home/vscode/.local/bin:$PATH"
     poetry config virtualenvs.in-project true
     poetry install
 fi
