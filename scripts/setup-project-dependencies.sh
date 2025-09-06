@@ -8,8 +8,6 @@ set -e
 echo "🔍 Debug: Current PATH: $PATH"
 echo "🔍 Debug: Looking for Poetry..."
 which poetry || echo "Poetry not found in PATH"
-ls -la /usr/local/bin/poetry 2>/dev/null || echo "Poetry not found at /usr/local/bin/poetry"
-ls -la /root/.local/bin/poetry 2>/dev/null || echo "Poetry not found at /root/.local/bin/poetry"
 
 # Ensure Poetry is in PATH (it should be in /usr/local/bin from codemian-standards)
 export PATH="/usr/local/bin:/root/.local/bin:/home/joe/.local/bin:$PATH"

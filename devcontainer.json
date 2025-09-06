@@ -63,7 +63,6 @@
   ],
   
   "remoteEnv": {
-    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}",
     "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
   },
   
