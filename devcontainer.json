@@ -1,7 +1,7 @@
 {
   "name": "Modern Python + Next.js Development Environment",
   "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
-  "runArgs": ["--name", "devcontainer_codemian"],
+  "runArgs": ["--name", "devcontainer_codemian", "--hostname", "devcontainer"],
   
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
@@ -12,18 +12,25 @@
       "userUid": "1000",
       "userGid": "1000",
       "upgradePackages": true,
-      "nonFreePackages": true
+      "nonFreePackages": false
     },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22",
       "nodeGypDependencies": true
     },
+    "ghcr.io/devcontainers-extra/features/poetry:2": {},
+    "ghcr.io/devcontainers-extra/features/pnpm:2": {},
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "enableNonRootDocker": true,
       "moby": false
     },
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "./features/codemian-standards": {},
+    // "./features/dotfiles": {
+    //   "repository": "https://github.com/JayDeeAU/dotfiles.git",
+    //   "installScript": "dotbootstrap.sh",
+    //   "targetPath": "~/dotfiles"
+    // },
     "./features/git-workflows": {},
     "./features/host-ssh-access": {},
     "./features/extension-manager": {},
@@ -46,28 +53,15 @@
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "zsh"
       }
     }
   },
   
   "remoteUser": "joe",
   "containerUser": "joe",
-  "hostname": "devcontainer",
   
-  "dotfiles": {
-    "repository": "https://github.com/JayDeeAU/dotfiles.git",
-    "targetPath": "~/dotfiles",
-    "installCommand": "dotbootstrap.sh"
-  },
-  
-  "postCreateCommand": {
-    "user-dirs": "mkdir -p ~/.local/bin ~/.config",
-    "poetry": "curl -sSL https://install.python-poetry.org | python3 - && export PATH=\"/home/joe/.local/bin:$PATH\"",
-    "pnpm": "npm install -g pnpm",
-    "setup-deps": "setup-project-dependencies",
-    "docker-context": "docker context use default"
-  },
+  "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment && .devcontainer/scripts/setup-environment",
   
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"

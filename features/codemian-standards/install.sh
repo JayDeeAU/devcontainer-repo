@@ -13,7 +13,8 @@ apt-get update && apt-get install -y \
     git \
     build-essential \
     software-properties-common \
-    apt-utils
+    apt-utils \
+    fontconfig
 
 # Handle existing vscode user/group
 if id -u vscode >/dev/null 2>&1; then
@@ -80,60 +81,5 @@ if [ "${INSTALLDEVTOOLS}" = "true" ]; then
         poppler-utils \
         zsh
 fi
-
-# NOTE: User directory setup moved to postCreateCommand since user doesn't exist during feature installation
-
-# Install project setup script globally
-cat << 'EOF' > /usr/local/bin/setup-project-dependencies
-#!/usr/bin/env bash
-# setup-project-dependencies
-# Automated project dependency setup (replaces complex monorepo detection)
-
-set -e
-
-echo "🚀 Setting up project dependencies..."
-
-# Ensure Poetry is in PATH
-export PATH="/home/joe/.local/bin:$PATH"
-
-# Poetry setup (if pyproject.toml exists)
-if [ -f "pyproject.toml" ]; then
-    echo "🐍 Setting up Poetry project..."
-    poetry config virtualenvs.in-project true
-    poetry install
-fi
-
-# pnpm setup (if package.json exists and not in node_modules)
-if [ -f "package.json" ] && [[ "$PWD" != *"node_modules"* ]]; then
-    echo "📦 Setting up pnpm project..."
-    pnpm install
-fi
-
-# Auto-detect common monorepo structure
-for dir in frontend backend api web server magmabi; do
-    if [ -d "$dir" ]; then
-        echo "📁 Found $dir directory, checking for dependencies..."
-        
-        if [ -f "$dir/pyproject.toml" ]; then
-            echo "🐍 Setting up Poetry in $dir..."
-            cd "$dir"
-            poetry config virtualenvs.in-project true
-            poetry install || echo "⚠️ Poetry install failed for $dir"
-            cd ..
-        fi
-        
-        if [ -f "$dir/package.json" ]; then
-            echo "📦 Setting up pnpm in $dir..."
-            cd "$dir"
-            pnpm install || echo "⚠️ pnpm install failed for $dir"
-            cd ..
-        fi
-    fi
-done
-
-echo "✅ Project dependencies setup completed"
-EOF
-
-chmod +x /usr/local/bin/setup-project-dependencies
 
 echo "✅ Codemian Standards installed successfully"
