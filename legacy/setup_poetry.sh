@@ -1,5 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+set -e  # Exit on error
+set -u  # Exit on undefined variable
+set -o pipefail  # Exit on pipe failure (if supported)
 
 # Basic error handling
 trap 'echo "❌ Script failed at line $LINENO"' ERR

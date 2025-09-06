@@ -1,0 +1,52 @@
+# version: '3.8'
+services:
+  ide:
+    container_name: ${PROJECT_NAME}_devcontainer
+    hostname: ${PROJECT_NAME}_devcontainer
+    # image: dockerhub.codemian.com/codem_devcontainer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile    
+      args:
+        PROJECT_NAME: ${PROJECT_NAME}
+        
+    networks:
+      - devcontainers_network
+      - traefik-proxy
+    # expose:
+      # - 6006  # Storybook
+      # - 8080  # Frontend
+      # - 8000  # Backend
+      # - 9229  # Node.js # removed after properly setting up debugging
+      # - 5173  # Vite
+    # ports:
+      # - "${FRONTEND_PORT:-6560}:8080"
+      # - "${BACKEND_PORT:-6570}:8000"
+      # - "9229:9229" # removed after properly setting up debugging
+      # - "5173:5173"
+      # - "6006:6006"
+    volumes:
+      - "${PROJECT_ROOT}/logs:/workspace/logs"
+      - "${PROJECT_ROOT}/logsD:/workspace/logsD"
+      - "${PROJECT_ROOT}:/workspace"
+      - "${PROJECT_ROOT}/..:/share/DevelopmentProjects"
+      - "${PROJECT_ROOT}/.devcontainer/.bashrc:/home/joe/.bashrc"
+      - "${PROJECT_ROOT}/.devcontainer/.zshrc:/home/joe/.zshrc"
+      - ssh-keys:/home/joe/.ssh
+    env_file:
+      - docker-compose.env
+    dns:
+      - 192.168.2.1
+      - 100.100.100.100
+      - 8.8.8.8
+    command: ["tail", "-f", "/dev/null"]  # Keeps the container running
+
+volumes:
+  ssh-keys:
+    driver: local
+
+networks:
+  devcontainers_network:
+    external: true
+  traefik-proxy:
+    external: true

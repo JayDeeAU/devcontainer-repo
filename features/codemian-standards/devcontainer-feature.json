@@ -1,0 +1,26 @@
+{
+  "id": "codemian-standards",
+  "version": "1.0.0",
+  "name": "Codemian Organizational Standards",
+  "description": "Standard fonts, networking tools, and debugging utilities for all Codemian projects",
+  "options": {
+    "installFonts": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install Microsoft and Google fonts"
+    },
+    "installNetworkTools": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install networking and debugging tools"
+    },
+    "installDevTools": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install additional development utilities"
+    }
+  },
+  "containerEnv": {
+    "CODEMIAN_STANDARDS_VERSION": "1.0.0"
+  }
+}
