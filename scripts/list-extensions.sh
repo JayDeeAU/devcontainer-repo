@@ -20,8 +20,8 @@ fi
 
 echo ""
 echo "📊 Statistics:"
-local installed_count=$(code --list-extensions 2>/dev/null | wc -l)
-local config_count=$(jq -r '.customizations.vscode.extensions[]? // empty' "$DEVCONTAINER_JSON" 2>/dev/null | wc -l)
+installed_count=$(code --list-extensions 2>/dev/null | wc -l)
+config_count=$(jq -r '.customizations.vscode.extensions[]? // empty' "$DEVCONTAINER_JSON" 2>/dev/null | wc -l)
 echo "  Installed: $installed_count extensions"
 echo "  In config: $config_count extensions"
 

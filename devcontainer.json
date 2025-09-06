@@ -1,8 +1,12 @@
 {
   "name": "Modern Python + Next.js Development Environment",
   "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
-  "runArgs": ["--name", "devcontainer_codemian", "--hostname", "devcontainer"],
-  
+  "runArgs": [
+    "--name",
+    "devcontainer_codemian",
+    "--hostname",
+    "devcontainer"
+  ],
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
@@ -37,20 +41,25 @@
       "backupExtensions": true
     }
   },
-  
   "customizations": {
     "vscode": {
-      "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance", 
-        "ms-python.black-formatter",
-        "ms-vscode.vscode-typescript-next",
+      "extensions": [        
         "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
         "eamodio.gitlens",
+        "esbenp.prettier-vscode",
         "github.copilot",
         "github.copilot-chat",
-        "ms-vscode-remote.remote-containers"
+        "github.vscode-pull-request-github",
+        "ms-azuretools.vscode-containers",
+        "ms-python.autopep8",
+        "ms-python.black-formatter",
+        "ms-python.debugpy",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.vscode-python-envs",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.vscode-typescript-next"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
@@ -58,20 +67,15 @@
       }
     }
   },
-  
   "remoteUser": "joe",
   "containerUser": "joe",
-  
   "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
-  
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
     "source=${localEnv:HOME}/.ssh,target=/home/joe/.ssh,type=bind,consistency=cached"
   ],
-  
   "remoteEnv": {
     "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
   },
-  
   "initializeCommand": "bash .devcontainer/scripts/init-ssh-setup.sh"
 }
