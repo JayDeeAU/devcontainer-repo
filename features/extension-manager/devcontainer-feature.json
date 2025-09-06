@@ -1,7 +1,27 @@
 {
   "id": "extension-manager",
   "version": "1.0.0",
-  "name": "extension-manager Feature",
-  "description": "Placeholder for extension-manager feature - to be implemented",
-  "options": {}
+  "name": "VS Code Extension Manager",
+  "description": "Automatically captures extension changes and syncs with devcontainer.json configuration",
+  "options": {
+    "autoSync": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically sync installed extensions to devcontainer.json"
+    },
+    "watchInterval": {
+      "type": "string",
+      "default": "30",
+      "description": "How often to check for extension changes (seconds)"
+    },
+    "backupExtensions": {
+      "type": "boolean",
+      "default": true,
+      "description": "Create backup of extension list before changes"
+    }
+  },
+  "containerEnv": {
+    "EXTENSION_MANAGER_AUTO_SYNC": "${autoSync}",
+    "EXTENSION_MANAGER_WATCH_INTERVAL": "${watchInterval}"
+  }
 }

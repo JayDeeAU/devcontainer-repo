@@ -26,9 +26,16 @@
     },
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "./features/codemian-standards": {
-      "installFonts": false
+      "installFonts": false,
+      "installNetworkTools": true,
+      "installDevTools": true
     },
-    "./features/host-ssh-access": {}
+    "./features/host-ssh-access": {},
+    "./features/extension-manager": {
+      "autoSync": true,
+      "watchInterval": "30",
+      "backupExtensions": true
+    }
   },
   
   "customizations": {
@@ -63,7 +70,6 @@
   ],
   
   "remoteEnv": {
-    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}",
     "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
   },
   

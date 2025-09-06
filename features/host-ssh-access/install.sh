@@ -57,13 +57,16 @@ EOF
 chown joe:joe /home/joe/.ssh/config
 chmod 600 /home/joe/.ssh/config
 
-# Create SSH test script
+# Create SSH test script for direct key usage
 echo "🧪 Creating SSH test script..."
 cat > /usr/local/bin/test-ssh-access << 'EOF'
 #!/bin/bash
-# Test SSH access to git providers
+# Test SSH access to git providers (direct key mode)
 
-echo "🔑 Testing SSH access to git providers..."
+echo "🔑 Testing SSH access to git providers (direct key mode)..."
+echo "📁 Available SSH keys:"
+ls -la /home/joe/.ssh/id_* 2>/dev/null || echo "No SSH keys found"
+echo ""
 
 # Split providers by comma
 IFS=',' read -ra PROVIDERS <<< "$1"
@@ -81,12 +84,16 @@ for provider in "${PROVIDERS[@]}"; do
     else
         echo "❌ $provider: Connection failed"
         echo "💡 Troubleshooting tips:"
-        echo "   - Ensure SSH agent is running on host: ssh-add -l"
-        echo "   - Add your key to agent: ssh-add ~/.ssh/id_rsa"
+        echo "   - Ensure SSH keys are mounted: ls -la ~/.ssh/"
+        echo "   - Check key permissions: chmod 600 ~/.ssh/id_*"
         echo "   - Verify key is added to $provider"
+        echo "   - Test manually: ssh -T git@$provider"
     fi
     echo ""
 done
+
+echo "🏠 Testing host SSH access..."
+echo "💡 Your host SSH should work normally (no special setup needed)"
 EOF
 
 chmod +x /usr/local/bin/test-ssh-access
