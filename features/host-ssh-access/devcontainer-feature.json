@@ -1,7 +1,26 @@
 {
   "id": "host-ssh-access",
   "version": "1.0.0",
-  "name": "host-ssh-access Feature",
-  "description": "Placeholder for host-ssh-access feature - to be implemented",
-  "options": {}
+  "name": "Host SSH Access",
+  "description": "Provides persistent SSH key access from host to DevContainer for git operations",
+  "options": {
+    "setupGitConfig": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically configure git user settings"
+    },
+    "testConnections": {
+      "type": "boolean", 
+      "default": true,
+      "description": "Test SSH connections to common git providers"
+    },
+    "gitProviders": {
+      "type": "string",
+      "default": "github.com,gitlab.com",
+      "description": "Comma-separated list of git providers to test"
+    }
+  },
+  "containerEnv": {
+    "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
+  }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/setup-environment
+# scripts/setup-environment.sh
 # Complete environment setup - dotfiles, project dependencies, and docker context
 
 set -e
@@ -20,8 +20,8 @@ fi
 
 # Setup project dependencies
 echo "📦 Setting up project dependencies..."
-chmod +x .devcontainer/scripts/setup-project-dependencies
-.devcontainer/scripts/setup-project-dependencies
+chmod +x .devcontainer/scripts/setup-project-dependencies.sh
+.devcontainer/scripts/setup-project-dependencies.sh
 
 # Set docker context
 echo "🐳 Setting docker context..."
