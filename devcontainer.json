@@ -25,16 +25,10 @@
       "moby": false
     },
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "./features/codemian-standards": {},
-    // "./features/dotfiles": {
-    //   "repository": "https://github.com/JayDeeAU/dotfiles.git",
-    //   "installScript": "dotbootstrap.sh",
-    //   "targetPath": "~/dotfiles"
-    // },
-    "./features/git-workflows": {},
-    "./features/host-ssh-access": {},
-    "./features/extension-manager": {},
-    "./features/claude-code": {}
+    "./features/codemian-standards": {
+      "installFonts": false
+    },
+    "./features/host-ssh-access": {}
   },
   
   "customizations": {
@@ -61,13 +55,17 @@
   "remoteUser": "joe",
   "containerUser": "joe",
   
-  "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment && .devcontainer/scripts/setup-environment",
+  "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
   
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=${localEnv:HOME}/.ssh,target=/home/joe/.ssh,type=bind,consistency=cached"
   ],
   
   "remoteEnv": {
-    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
-  }
+    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}",
+    "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
+  },
+  
+  "initializeCommand": "bash .devcontainer/scripts/init-ssh-setup.sh"
 }
