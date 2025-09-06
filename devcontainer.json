@@ -39,11 +39,18 @@
       "autoSync": true,
       "watchInterval": "30",
       "backupExtensions": true
-    }
+    },
+    "./features/claude-code": {
+      "installLatest": true,
+      "createAliases": true,
+      "setupAutoCompletion": true,
+      "apiKeyPersistence": true
+    }    
   },
   "customizations": {
     "vscode": {
-      "extensions": [        
+      "extensions": [
+        "anthropic.claude-code",
         "bradlc.vscode-tailwindcss",
         "dbaeumer.vscode-eslint",
         "eamodio.gitlens",
