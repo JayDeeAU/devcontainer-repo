@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # .devcontainer/scripts/sync-extensions.sh
 # Extension sync script - captures VS Code extension changes
@@ -40,14 +39,17 @@ update_devcontainer_json() {
     cp "$DEVCONTAINER_JSON" "$BACKUP_DIR/devcontainer-$timestamp.json"
     echo "💾 Backup created: devcontainer-$timestamp.json"
     
+    # Clean the extensions array of any comment lines or invalid entries
+    local cleaned_extensions=$(echo "$new_extensions" | jq 'map(select(. != null and . != "" and (startswith("Extensions installed") | not)))')
+    
     # Update the extensions array in devcontainer.json
     local temp_file=$(mktemp)
-    jq --argjson extensions "$new_extensions" \
+    jq --argjson extensions "$cleaned_extensions" \
        '.customizations.vscode.extensions = $extensions' \
        "$DEVCONTAINER_JSON" > "$temp_file"
     
     mv "$temp_file" "$DEVCONTAINER_JSON"
-    echo "✅ Updated devcontainer.json with $(echo "$new_extensions" | jq length) extensions"
+    echo "✅ Updated devcontainer.json with $(echo "$cleaned_extensions" | jq length) extensions"
 }
 
 # Main sync function
