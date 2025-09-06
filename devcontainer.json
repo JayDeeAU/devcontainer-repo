@@ -1,8 +1,19 @@
 {
   "name": "Modern Python + Next.js Development Environment",
   "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "runArgs": ["--name", "devcontainer_codemian"],
   
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": false,
+      "username": "joe",
+      "userUid": "1000",
+      "userGid": "1000",
+      "upgradePackages": true,
+      "nonFreePackages": true
+    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22",
       "nodeGypDependencies": true
@@ -40,26 +51,29 @@
     }
   },
   
-  "remoteUser": "vscode",
-  "updateRemoteUserUID": true,
+  "remoteUser": "joe",
+  "containerUser": "joe",
+  "hostname": "devcontainer",
   
-  "dotfiles.repository": "https://github.com/JayDeeAU/dotfiles.git",
-  "dotfiles.targetPath": "~/dotfiles",
-  "dotfiles.installCommand": "dotbootstrap.sh",
+  "dotfiles": {
+    "repository": "https://github.com/JayDeeAU/dotfiles.git",
+    "targetPath": "~/dotfiles",
+    "installCommand": "dotbootstrap.sh"
+  },
   
   "postCreateCommand": {
-    "poetry": "curl -sSL https://install.python-poetry.org | python3 - && export PATH=\"/home/vscode/.local/bin:$PATH\"",
+    "user-dirs": "mkdir -p ~/.local/bin ~/.config",
+    "poetry": "curl -sSL https://install.python-poetry.org | python3 - && export PATH=\"/home/joe/.local/bin:$PATH\"",
     "pnpm": "npm install -g pnpm",
     "setup-deps": "setup-project-dependencies",
     "docker-context": "docker context use default"
   },
   
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=${localEnv:SSH_AUTH_SOCK},target=/ssh-agent,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
   
   "remoteEnv": {
-    "SSH_AUTH_SOCK": "/ssh-agent"
+    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
   }
 }
