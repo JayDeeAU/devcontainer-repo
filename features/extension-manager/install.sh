@@ -70,6 +70,9 @@ chmod +x /usr/local/bin/restore-extensions
 if [ "$AUTO_SYNC" = "true" ]; then
     echo "🤖 Setting up auto-sync daemon..."
     
+    # Ensure the directory exists first
+    mkdir -p /usr/local/lib/extension-manager
+    
     cat > /usr/local/lib/extension-manager/auto-sync-daemon.sh << 'EOF'
 #!/bin/bash
 # Auto-sync daemon wrapper
@@ -88,7 +91,6 @@ while true; do
 done
 EOF
     
-    mkdir -p /usr/local/lib/extension-manager
     chmod +x /usr/local/lib/extension-manager/auto-sync-daemon.sh
 fi
 

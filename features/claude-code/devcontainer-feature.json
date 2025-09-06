@@ -1,7 +1,32 @@
 {
   "id": "claude-code",
   "version": "1.0.0",
-  "name": "claude-code Feature",
-  "description": "Placeholder for claude-code feature - to be implemented",
-  "options": {}
+  "name": "Claude Code AI Assistant",
+  "description": "Installs Claude Code CLI with persistent API key configuration across container rebuilds",
+  "options": {
+    "installLatest": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install the latest version of Claude Code"
+    },
+    "createAliases": {
+      "type": "boolean",
+      "default": true,
+      "description": "Create convenient aliases for Claude Code commands"
+    },
+    "setupAutoCompletion": {
+      "type": "boolean",
+      "default": true,
+      "description": "Setup shell auto-completion for Claude Code"
+    },
+    "apiKeyPersistence": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable API key persistence across container rebuilds"
+    }
+  },
+  "containerEnv": {
+    "CLAUDE_CODE_INSTALLED": "true",
+    "CLAUDE_CODE_CONFIG_DIR": "/home/joe/.config/claude-code"
+  }
 }
