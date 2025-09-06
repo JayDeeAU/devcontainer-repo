@@ -196,3 +196,4 @@ case ":$PATH:" in
 esac
 # pnpm end
 eval "$(oh-my-posh init bash --config /home/joe/.cache/oh-my-posh/themes/clean-detailed.omp.json)"
+eval "$(zoxide init zsh)"

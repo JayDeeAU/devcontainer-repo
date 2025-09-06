@@ -30,3 +30,5 @@
   export PATH="$HOME/.local/bin:$PATH"
   [[ $- == *i* ]] && dotfiles_check_updates
   [ -f "$HOME/.config/zsh/zshrc-shared" ] && source "$HOME/.config/zsh/zshrc-shared"
+  eval "$(zoxide init zsh)"
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
