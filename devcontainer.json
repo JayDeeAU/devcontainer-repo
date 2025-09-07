@@ -1,12 +1,8 @@
 {
   "name": "Modern Python + Next.js Development Environment",
   "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
-  "runArgs": [
-    "--name",
-    "devcontainer_codemian",
-    "--hostname",
-    "devcontainer"
-  ],
+  "runArgs": ["--name", "devcontainer_codemian", "--hostname", "devcontainer"],
+  
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
@@ -42,11 +38,10 @@
     },
     "./features/claude-code": {
       "installLatest": true,
-      "createAliases": true,
-      "setupAutoCompletion": true,
-      "apiKeyPersistence": true
-    }    
+      "createAliases": true
+    }
   },
+  
   "customizations": {
     "vscode": {
       "extensions": [
@@ -74,15 +69,19 @@
       }
     }
   },
+  
   "remoteUser": "joe",
   "containerUser": "joe",
+  
   "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
+  
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=${localEnv:HOME}/.ssh,target=/home/joe/.ssh,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.ssh,target=/home/joe/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/joe/.claude,type=bind,consistency=cached"
   ],
+  
   "remoteEnv": {
     "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
-  },
-  "initializeCommand": "bash .devcontainer/scripts/init-ssh-setup.sh"
+  }
 }
