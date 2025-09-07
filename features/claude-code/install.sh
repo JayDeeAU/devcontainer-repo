@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # features/claude-code/install.sh
-# Install Claude Code CLI with persistent credentials
+# Install Claude Code CLI with direct credential persistence
 
 set -e
 
@@ -9,8 +9,6 @@ echo "🤖 Installing Claude Code AI Assistant..."
 # Get configuration from feature options
 INSTALL_LATEST=${INSTALLLATEST:-true}
 CREATE_ALIASES=${CREATEALIASES:-true}
-SETUP_AUTOCOMPLETION=${SETUPAUTOCOMPLETION:-true}
-API_KEY_PERSISTENCE=${APIKEYPERSISTENCE:-true}
 
 # Handle user situation - could be vscode or joe depending on feature order
 CONTAINER_USER=""
@@ -26,7 +24,6 @@ else
     exit 1
 fi
 
-# Use the detected user for all operations
 USER_HOME="/home/$CONTAINER_USER"
 
 # Install Node.js if not present (Claude Code requires Node.js)
@@ -42,153 +39,47 @@ if [ "$INSTALL_LATEST" = "true" ]; then
     npm install -g @anthropic-ai/claude-code
 fi
 
-# Create configuration directory structure
-echo "📁 Setting up Claude Code configuration..."
-mkdir -p "$USER_HOME/.config/claude-code"
-mkdir -p "$USER_HOME/.claude-code-backups"
+# Ensure Claude config directory exists and has correct ownership
+echo "📁 Setting up Claude Code configuration directory..."
+mkdir -p "$USER_HOME/.claude"
+chown -R "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.claude"
 
-# Create wrapper commands that call scripts in .devcontainer/scripts/
-echo "🔗 Setting up Claude Code commands..."
-
-cat > /usr/local/bin/claude-code-setup << 'EOF'
+# Create simple setup helper
+cat > /usr/local/bin/claude-setup << 'EOF'
 #!/bin/bash
-# Wrapper for Claude Code setup script
-# Detect current user (could be joe or vscode)
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-else
-    echo "❌ No suitable user found"
-    exit 1
-fi
+# Simple Claude Code setup helper
 
-SCRIPT_PATH="/workspaces/$(basename $PWD)/.devcontainer/scripts/claude-code-setup.sh"
-if [ -f "$SCRIPT_PATH" ]; then
-    CONTAINER_USER="$CONTAINER_USER" "$SCRIPT_PATH" "$@"
+echo "🤖 Claude Code Setup"
+echo "===================="
+echo ""
+echo "✨ Claude Code is ready to use!"
+echo ""
+echo "🚀 To get started:"
+echo "   1. Run 'claude' to start Claude Code"
+echo "   2. Choose your authentication method when prompted"
+echo "   3. Your credentials automatically persist across container rebuilds"
+echo ""
+
+# Check if already authenticated
+if claude doctor &>/dev/null; then
+    echo "✅ Claude Code is already authenticated and ready to use!"
 else
-    echo "❌ Claude Code setup script not found at: $SCRIPT_PATH"
-    echo "💡 Make sure your .devcontainer/scripts/ directory contains the Claude Code scripts"
-    exit 1
+    echo "💡 Run 'claude' to authenticate for the first time"
 fi
 EOF
 
-cat > /usr/local/bin/claude-code-test << 'EOF'
-#!/bin/bash
-# Wrapper for Claude Code test script
-# Detect current user (could be joe or vscode)
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-else
-    echo "❌ No suitable user found"
-    exit 1
-fi
+chmod +x /usr/local/bin/claude-setup
 
-SCRIPT_PATH="/workspaces/$(basename $PWD)/.devcontainer/scripts/claude-code-test.sh"
-if [ -f "$SCRIPT_PATH" ]; then
-    CONTAINER_USER="$CONTAINER_USER" "$SCRIPT_PATH" "$@"
-else
-    echo "❌ Claude Code test script not found at: $SCRIPT_PATH"
-    echo "💡 Make sure your .devcontainer/scripts/ directory contains the Claude Code scripts"
-    exit 1
-fi
-EOF
-
-cat > /usr/local/bin/claude-code-status << 'EOF'
-#!/bin/bash
-# Wrapper for Claude Code status script
-# Detect current user (could be joe or vscode)
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-else
-    echo "❌ No suitable user found"
-    exit 1
-fi
-
-SCRIPT_PATH="/workspaces/$(basename $PWD)/.devcontainer/scripts/claude-code-status.sh"
-if [ -f "$SCRIPT_PATH" ]; then
-    CONTAINER_USER="$CONTAINER_USER" "$SCRIPT_PATH" "$@"
-else
-    echo "❌ Claude Code status script not found at: $SCRIPT_PATH"
-    echo "💡 Make sure your .devcontainer/scripts/ directory contains the Claude Code scripts"
-    exit 1
-fi
-EOF
-
-cat > /usr/local/bin/claude-code-backup << 'EOF'
-#!/bin/bash
-# Wrapper for Claude Code backup script
-# Detect current user (could be joe or vscode)
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-else
-    echo "❌ No suitable user found"
-    exit 1
-fi
-
-SCRIPT_PATH="/workspaces/$(basename $PWD)/.devcontainer/scripts/claude-code-backup.sh"
-if [ -f "$SCRIPT_PATH" ]; then
-    CONTAINER_USER="$CONTAINER_USER" "$SCRIPT_PATH" "$@"
-else
-    echo "❌ Claude Code backup script not found at: $SCRIPT_PATH"
-    echo "💡 Make sure your .devcontainer/scripts/ directory contains the Claude Code scripts"
-    exit 1
-fi
-EOF
-
-cat > /usr/local/bin/claude-code-switch-auth << 'EOF'
-#!/bin/bash
-# Wrapper for Claude Code auth switching script
-# Detect current user (could be joe or vscode)
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-else
-    echo "❌ No suitable user found"
-    exit 1
-fi
-
-SCRIPT_PATH="/workspaces/$(basename $PWD)/.devcontainer/scripts/claude-code-switch-auth.sh"
-if [ -f "$SCRIPT_PATH" ]; then
-    CONTAINER_USER="$CONTAINER_USER" "$SCRIPT_PATH" "$@"
-else
-    echo "❌ Claude Code auth switch script not found at: $SCRIPT_PATH"
-    echo "💡 Make sure your .devcontainer/scripts/ directory contains the Claude Code scripts"
-    exit 1
-fi
-EOF
-
-# Make wrappers executable
-chmod +x /usr/local/bin/claude-code-setup
-chmod +x /usr/local/bin/claude-code-test
-chmod +x /usr/local/bin/claude-code-status
-chmod +x /usr/local/bin/claude-code-backup
-chmod +x /usr/local/bin/claude-code-switch-auth
-
-# Create helpful aliases if requested
+# Create aliases if requested
 if [ "$CREATE_ALIASES" = "true" ]; then
     echo "🔧 Creating Claude Code aliases..."
     
     cat > "$USER_HOME/.claude-code-aliases" << 'EOF'
 # Claude Code aliases for convenience
 alias cc='claude'
-alias cc-setup='claude-code-setup'
-alias cc-test='claude-code-test'
-alias cc-status='claude-code-status'
-alias cc-backup='claude-code-backup'
-alias cc-switch='claude-code-switch-auth'
-alias cc-login='claude login'
-alias cc-logout='claude logout'
-alias cc-config='cat ~/.config/claude-code/config.json | jq . 2>/dev/null || echo "No local config found"'
+alias cc-setup='claude-setup'
 
-# Specialized Claude Code commands
+# Specialized Claude Code commands  
 alias cc-python='claude "write python code for:"'
 alias cc-js='claude "write javascript code for:"'
 alias cc-fix='claude "fix this code:"'
@@ -210,51 +101,14 @@ EOF
     fi
 fi
 
-# Setup auto-completion if requested
-if [ "$SETUP_AUTOCOMPLETION" = "true" ]; then
-    echo "⚡ Setting up shell auto-completion..."
-    
-    # For bash
-    if command -v claude &> /dev/null; then
-        mkdir -p /etc/bash_completion.d
-        claude completion bash > /etc/bash_completion.d/claude-code 2>/dev/null || true
-    fi
-    
-    # For zsh
-    if [ -d /usr/share/zsh ]; then
-        mkdir -p /usr/share/zsh/vendor-completions
-        claude completion zsh > /usr/share/zsh/vendor-completions/_claude-code 2>/dev/null || true
-    fi
-fi
-
-# Set ownership for all user files
-chown -R "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.config/claude-code"
-chown -R "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.claude-code-backups"
-
 echo "✅ Claude Code AI Assistant installed successfully!"
 echo ""
-echo "📁 Script location: .devcontainer/scripts/"
-echo "💡 The actual Claude Code management scripts should be maintained in your"
-echo "   .devcontainer/scripts/ directory for easy version control and editing."
+echo "🚀 To get started:"
+echo "   • Run 'claude-setup' for setup help (optional)"
+echo "   • Run 'claude' to authenticate and start coding"
 echo ""
-echo "🚀 Next steps:"
-echo "   1. Create the Claude Code scripts in .devcontainer/scripts/"
-echo "   2. Run 'claude-code-setup' to configure authentication"
-echo "   3. Test with 'claude-code-test'"
+echo "📋 Available aliases:"
+echo "   cc, cc-python, cc-js, cc-fix, cc-explain, cc-review"
 echo ""
-echo "📋 Available commands:"
-echo "   claude-code-setup      - Configure authentication (OAuth or API key)"
-echo "   claude-code-test       - Test configuration"
-echo "   claude-code-status     - Show status"
-echo "   claude-code-backup     - Backup config to host"
-echo "   claude-code-switch-auth - Switch between auth methods"
-
-if [ "$CREATE_ALIASES" = "true" ]; then
-    echo ""
-    echo "🔧 Available aliases (after shell restart):"
-    echo "   cc, cc-python, cc-js, cc-fix, cc-explain, cc-review"
-fi
-
-echo ""
-echo "💡 Your credentials will persist across container rebuilds!"
+echo "💡 Your credentials automatically persist via direct mount!"
 echo "🔄 Currently using: $CONTAINER_USER user"
