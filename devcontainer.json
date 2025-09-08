@@ -2,10 +2,10 @@
   "name": "Modern Python + Next.js Development Environment",
   "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
   "runArgs": [
-  "--name", 
-  "devcontainer_${localWorkspaceFolderBasename}",
-  "--hostname", 
-  "devcontainer-${localWorkspaceFolderBasename}"
+    "--name", 
+    "devcontainer_${localWorkspaceFolderBasename}",
+    "--hostname", 
+    "devcontainer-${localWorkspaceFolderBasename}"
   ],  
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
