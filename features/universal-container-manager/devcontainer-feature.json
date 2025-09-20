@@ -1,0 +1,29 @@
+{
+  "id": "universal-container-manager",
+  "version": "1.0.0",
+  "name": "Universal Container Management",
+  "description": "Cross-project container management with environment detection and health monitoring. Based on proven enhanced-container-manager.sh with 1,200+ lines of production code.",
+  "options": {
+    "enableAutoSwitching": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically switch environments based on git branch"
+    },
+    "enableHealthMonitoring": {
+      "type": "boolean", 
+      "default": true,
+      "description": "Enable container health monitoring and logging"
+    },
+    "enableWorktreeSupport": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable git worktree support for debug modes (production feature)"
+    }
+  },
+  "containerEnv": {
+    "CONTAINER_MANAGER_VERSION": "2.0.0-universal",
+    "ENABLE_AUTO_SWITCHING": "${enableAutoSwitching}",
+    "ENABLE_HEALTH_MONITORING": "${enableHealthMonitoring}",
+    "ENABLE_WORKTREE_SUPPORT": "${enableWorktreeSupport}"
+  }
+}
