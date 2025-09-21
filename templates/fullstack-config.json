@@ -1,0 +1,71 @@
+{
+  "title": "Full-Stack Application Configuration",
+  "description": "Template for complex applications with frontend, backend, database, and cache",
+  "environments": {
+    "prod": {
+      "branch": "main",
+      "ports": {
+        "frontend": 7500,
+        "backend": 7510,
+        "database": 7520,
+        "redis": 7530,
+        "flower": 7555,
+        "celery_worker": 7545,
+        "celery_beat": 7546
+      },
+      "compose_files": ["docker/docker-compose.prod.yml"],
+      "debug_compose_files": ["docker/docker-compose.prod.yml", "docker/docker-compose.prod-debug.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 30},
+        {"service": "backend", "url": "/api/health", "timeout": 15},
+        {"service": "redis", "command": "redis-cli ping", "timeout": 5}
+      ]
+    },
+    "staging": {
+      "branch": "develop",
+      "ports": {
+        "frontend": 7600,
+        "backend": 7610,
+        "database": 7620,
+        "redis": 7630,
+        "flower": 7655,
+        "celery_worker": 7645,
+        "celery_beat": 7646
+      },
+      "compose_files": ["docker/docker-compose.staging.yml"],
+      "debug_compose_files": ["docker/docker-compose.staging.yml", "docker/docker-compose.staging-debug.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 30},
+        {"service": "backend", "url": "/api/health", "timeout": 15},
+        {"service": "redis", "command": "redis-cli ping", "timeout": 5}
+      ]
+    },
+    "local": {
+      "branch": "feature/*",
+      "ports": {
+        "frontend": 7700,
+        "backend": 7710,
+        "database": 7720,
+        "redis": 7730,
+        "flower": 7755,
+        "celery_worker": 7745,
+        "celery_beat": 7746
+      },
+      "compose_files": ["docker/docker-compose.local.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 45},
+        {"service": "backend", "url": "/api/health", "timeout": 15},
+        {"service": "redis", "command": "redis-cli ping", "timeout": 5}
+      ]
+    }
+  },
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "container_prefix": "{{PROJECT_NAME}}_",
+    "worktree_support": true,
+    "worktree_dirs": {
+      "prod": "../{{PROJECT_NAME}}-production",
+      "staging": "../{{PROJECT_NAME}}-staging"
+    }
+  }
+}

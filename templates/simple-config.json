@@ -1,0 +1,45 @@
+{
+  "title": "Simple Application Configuration",
+  "description": "Template for simple applications with minimal services",
+  "environments": {
+    "prod": {
+      "branch": "main",
+      "ports": {
+        "app": 7500
+      },
+      "compose_files": ["docker-compose.yml"],
+      "health_checks": [
+        {"service": "app", "url": "/health", "timeout": 30}
+      ]
+    },
+    "staging": {
+      "branch": "develop",
+      "ports": {
+        "app": 7600
+      },
+      "compose_files": ["docker-compose.yml"],
+      "health_checks": [
+        {"service": "app", "url": "/health", "timeout": 30}
+      ]
+    },
+    "local": {
+      "branch": "feature/*",
+      "ports": {
+        "app": 7700
+      },
+      "compose_files": ["docker-compose.yml"],
+      "health_checks": [
+        {"service": "app", "url": "/health", "timeout": 45}
+      ]
+    }
+  },
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "container_prefix": "{{PROJECT_NAME}}_",
+    "worktree_support": false,
+    "worktree_dirs": {
+      "prod": "../{{PROJECT_NAME}}-production",
+      "staging": "../{{PROJECT_NAME}}-staging"
+    }
+  }
+}

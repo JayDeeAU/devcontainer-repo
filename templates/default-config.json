@@ -1,0 +1,63 @@
+{
+  "title": "Universal Container Configuration",
+  "description": "Cross-project container management configuration template",
+  "environments": {
+    "prod": {
+      "branch": "main",
+      "ports": {
+        "frontend": 7500,
+        "backend": 7510
+      },
+      "compose_files": ["docker/docker-compose.prod.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 30},
+        {"service": "backend", "url": "/api/health", "timeout": 15}
+      ],
+      "environment_variables": {
+        "NODE_ENV": "production",
+        "ENVIRONMENT": "production"
+      }
+    },
+    "staging": {
+      "branch": "develop",
+      "ports": {
+        "frontend": 7600,
+        "backend": 7610
+      },
+      "compose_files": ["docker/docker-compose.staging.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 30},
+        {"service": "backend", "url": "/api/health", "timeout": 15}
+      ],
+      "environment_variables": {
+        "NODE_ENV": "development",
+        "ENVIRONMENT": "staging"
+      }
+    },
+    "local": {
+      "branch": "feature/*",
+      "ports": {
+        "frontend": 7700,
+        "backend": 7710
+      },
+      "compose_files": ["docker/docker-compose.local.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 45},
+        {"service": "backend", "url": "/api/health", "timeout": 15}
+      ],
+      "environment_variables": {
+        "NODE_ENV": "development",
+        "ENVIRONMENT": "development"
+      }
+    }
+  },
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "container_prefix": "{{PROJECT_NAME}}_",
+    "worktree_support": false,
+    "worktree_dirs": {
+      "prod": "../{{PROJECT_NAME}}-production",
+      "staging": "../{{PROJECT_NAME}}-staging"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "title": "Microservices Configuration",
+  "description": "Template for microservices architecture with multiple backend services",
+  "environments": {
+    "prod": {
+      "branch": "main",
+      "ports": {
+        "frontend": 7500,
+        "api_gateway": 7510,
+        "user_service": 7511,
+        "auth_service": 7512,
+        "data_service": 7513,
+        "database": 7520,
+        "redis": 7530
+      },
+      "compose_files": ["docker/docker-compose.prod.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 30},
+        {"service": "api_gateway", "url": "/health", "timeout": 15},
+        {"service": "user_service", "url": "/health", "timeout": 15},
+        {"service": "auth_service", "url": "/health", "timeout": 15}
+      ]
+    },
+    "staging": {
+      "branch": "develop",
+      "ports": {
+        "frontend": 7600,
+        "api_gateway": 7610,
+        "user_service": 7611,
+        "auth_service": 7612,
+        "data_service": 7613,
+        "database": 7620,
+        "redis": 7630
+      },
+      "compose_files": ["docker/docker-compose.staging.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 30},
+        {"service": "api_gateway", "url": "/health", "timeout": 15},
+        {"service": "user_service", "url": "/health", "timeout": 15},
+        {"service": "auth_service", "url": "/health", "timeout": 15}
+      ]
+    },
+    "local": {
+      "branch": "feature/*",
+      "ports": {
+        "frontend": 7700,
+        "api_gateway": 7710,
+        "user_service": 7711,
+        "auth_service": 7712,
+        "data_service": 7713,
+        "database": 7720,
+        "redis": 7730
+      },
+      "compose_files": ["docker/docker-compose.local.yml"],
+      "health_checks": [
+        {"service": "frontend", "url": "/health", "timeout": 45},
+        {"service": "api_gateway", "url": "/health", "timeout": 15},
+        {"service": "user_service", "url": "/health", "timeout": 15},
+        {"service": "auth_service", "url": "/health", "timeout": 15}
+      ]
+    }
+  },
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "container_prefix": "{{PROJECT_NAME}}_",
+    "worktree_support": false,
+    "worktree_dirs": {
+      "prod": "../{{PROJECT_NAME}}-production",
+      "staging": "../{{PROJECT_NAME}}-staging"
+    }
+  }
+}

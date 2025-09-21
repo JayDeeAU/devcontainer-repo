@@ -97,6 +97,7 @@ readonly DEBUG_OVERLAY_PATTERN="docker/docker-compose.%s-debug.yml"
 # ============================================================================
 
 # Load project configuration or use defaults
+# CORRECT: Load project configuration or use defaults
 load_project_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
         log "Loading configuration from $CONFIG_FILE"
@@ -106,7 +107,7 @@ load_project_config() {
         STAGING_WORKTREE_DIR=$(jq -r '.project.worktree_dirs.staging // "../${PROJECT_NAME}-staging"' "$CONFIG_FILE")
         WORKTREE_SUPPORT=$(jq -r '.project.worktree_support // false' "$CONFIG_FILE")
     else
-        # Auto-detect from directory name (fallback)
+        # Auto-detect from directory name (THIS IS THE KEY PART)
         PROJECT_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
         CONTAINER_PREFIX="${PROJECT_NAME}_"
         PROD_WORKTREE_DIR="../${PROJECT_NAME}-production"
@@ -858,171 +859,13 @@ initialize_project() {
         fi
     fi
     
-    # Detect project type and generate appropriate config
-    if [[ -f "docker/docker-compose.local.yml" ]] && grep -q "magmabi" docker/docker-compose.local.yml 2>/dev/null; then
-        log "Detected MagmaBI project structure"
-        generate_magmabi_config
-    else
-        log "Detected standard project structure"
-        generate_default_config
-    fi
-    
-    success "Project initialized with universal container management"
+    echo "Use the config generator to create project configuration:"
+    echo "  .devcontainer/scripts/config-generator.sh default"
+    echo "  .devcontainer/scripts/config-generator.sh fullstack"
     echo ""
-    echo "Configuration created: $CONFIG_FILE"
-    echo ""
-    echo "Available commands:"
-    echo "  universal-container-manager switch [env]"
-    echo "  universal-container-manager health"
-    echo "  universal-container-manager status"
-    echo ""
-    echo "Environment aliases:"
-    echo "  env-prod, env-staging, env-local"
-    echo "  env-prod-debug, env-staging-debug"
+    echo "Or manually create .container-config.json for custom setup."
 }
 
-# NEW: Generate default configuration
-generate_default_config() {
-    local project_name="${PROJECT_NAME}"
-    
-    cat > "$CONFIG_FILE" << EOF
-{
-  "environments": {
-    "prod": {
-      "branch": "main",
-      "ports": {
-        "frontend": 7500,
-        "backend": 7510,
-        "debug": 7511,
-        "redis": 7530,
-        "flower": 7555
-      },
-      "compose_files": ["docker/docker-compose.prod.yml"],
-      "debug_compose_files": ["docker/docker-compose.prod.yml", "docker/docker-compose.prod-debug.yml"],
-      "health_checks": [
-        {"service": "frontend", "url": "/health", "timeout": 30},
-        {"service": "backend", "url": "/api/health", "timeout": 15}
-      ]
-    },
-    "staging": {
-      "branch": "develop",
-      "ports": {
-        "frontend": 7600,
-        "backend": 7610,
-        "debug": 7611,
-        "redis": 7630,
-        "flower": 7655
-      },
-      "compose_files": ["docker/docker-compose.staging.yml"],
-      "debug_compose_files": ["docker/docker-compose.staging.yml", "docker/docker-compose.staging-debug.yml"],
-      "health_checks": [
-        {"service": "frontend", "url": "/health", "timeout": 30},
-        {"service": "backend", "url": "/api/health", "timeout": 15}
-      ]
-    },
-    "local": {
-      "branch": "feature/*",
-      "ports": {
-        "frontend": 7700,
-        "backend": 7710,
-        "debug": 7711,
-        "redis": 7730,
-        "flower": 7755
-      },
-      "compose_files": ["docker/docker-compose.local.yml"],
-      "health_checks": [
-        {"service": "frontend", "url": "/health", "timeout": 45},
-        {"service": "backend", "url": "/api/health", "timeout": 15}
-      ]
-    }
-  },
-  "project": {
-    "name": "$project_name",
-    "container_prefix": "${project_name}_",
-    "worktree_support": false,
-    "worktree_dirs": {
-      "prod": "../$project_name-production",
-      "staging": "../$project_name-staging"
-    }
-  }
-}
-EOF
-}
-
-# NEW: Generate MagmaBI-specific configuration
-generate_magmabi_config() {
-    cat > "$CONFIG_FILE" << 'EOF'
-{
-  "environments": {
-    "prod": {
-      "branch": "main",
-      "ports": {
-        "frontend": 7500,
-        "backend": 7510,
-        "debug": 7511,
-        "redis": 7530,
-        "flower": 7555,
-        "celery_worker": 7545,
-        "celery_beat": 7546
-      },
-      "compose_files": ["docker/docker-compose.prod.yml"],
-      "debug_compose_files": ["docker/docker-compose.prod.yml", "docker/docker-compose.prod-debug.yml"],
-      "health_checks": [
-        {"service": "frontend", "url": "/health", "timeout": 30},
-        {"service": "backend", "url": "/api/health", "timeout": 15},
-        {"service": "redis", "command": "redis-cli ping", "timeout": 5}
-      ]
-    },
-    "staging": {
-      "branch": "develop",
-      "ports": {
-        "frontend": 7600,
-        "backend": 7610,
-        "debug": 7611,
-        "redis": 7630,
-        "flower": 7655,
-        "celery_worker": 7645,
-        "celery_beat": 7646
-      },
-      "compose_files": ["docker/docker-compose.staging.yml"],
-      "debug_compose_files": ["docker/docker-compose.staging.yml", "docker/docker-compose.staging-debug.yml"],
-      "health_checks": [
-        {"service": "frontend", "url": "/health", "timeout": 30},
-        {"service": "backend", "url": "/api/health", "timeout": 15},
-        {"service": "redis", "command": "redis-cli ping", "timeout": 5}
-      ]
-    },
-    "local": {
-      "branch": "feature/*",
-      "ports": {
-        "frontend": 7700,
-        "backend": 7710,
-        "debug": 7711,
-        "redis": 7730,
-        "flower": 7755,
-        "celery_worker": 7745,
-        "celery_beat": 7746
-      },
-      "compose_files": ["docker/docker-compose.local.yml"],
-      "health_checks": [
-        {"service": "frontend", "url": "/health", "timeout": 45},
-        {"service": "backend", "url": "/api/health", "timeout": 15},
-        {"service": "redis", "command": "redis-cli ping", "timeout": 5}
-      ]
-    }
-  },
-  "project": {
-    "name": "magmabi",
-    "container_prefix": "magmabi_",
-    "worktree_support": true,
-    "worktree_dirs": {
-      "prod": "../magmabi-production",
-      "staging": "../magmabi-staging"
-    }
-  }
-}
-EOF
-}
 
 show_help() {
     echo ""
