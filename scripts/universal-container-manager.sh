@@ -85,6 +85,15 @@ else
     readonly DEBUG="[D]"
 fi
 
+# ================================
+# 📝 Logging Utilities
+# ================================
+log()  { echo -e "[\033[1;34mINFO\033[0m] $*"; }
+warn() { echo -e "[\033[1;33mWARN\033[0m] $*"; }
+fail() { echo -e "[\033[1;31mFAIL\033[0m] $*"; }
+error() { echo -e "[\033[1;31mFAIL\033[0m] $*"; }
+success() { echo -e "[\033[1;32mCHECK\033[0m] $*"; }
+
 # ✅ FIXED: Universal port range assignments (no hardcoding)
 readonly PROD_PORT_BASE=7500
 readonly STAGING_PORT_BASE=7600
