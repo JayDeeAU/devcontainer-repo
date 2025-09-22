@@ -249,7 +249,7 @@ update_frontend_version_file() {
     log "Creating/updating frontend version file"
     
     cat > "$FRONTEND_VERSION_FILE" << EOF
-// Auto-generated version file
+// Auto-generated version file - DO NOT EDIT MANUALLY
 // Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 export const VERSION = '$new_version';
@@ -257,32 +257,30 @@ export const VERSION = '$new_version';
 export const BUILD_INFO = {
   version: '$new_version',
   buildDate: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")',
-  commitHash: '$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")',
-  branch: '$(git branch --show-current 2>/dev/null || echo "unknown")',
+  gitCommit: '$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")',
+  gitBranch: '$(git branch --show-current 2>/dev/null || echo "unknown")',
   environment: process.env.NODE_ENV || 'development',
 } as const;
 
-// Version component for Next.js App Router
-export function VersionDisplay() {
-  return (
-    <div className="text-xs text-gray-500">
-      v{VERSION}
-    </div>
-  );
-}
-
-// Hook for accessing version info
+// React hook for accessing version info
 export function useVersion() {
   return BUILD_INFO;
 }
 
 // API route helper
 export function getVersionInfo() {
-  return {
-    version: VERSION,
-    ...BUILD_INFO,
-  };
+  return BUILD_INFO;
 }
+
+// Named export instead of anonymous default
+const versionModule = {
+  VERSION,
+  BUILD_INFO,
+  getVersionInfo,
+  useVersion,
+};
+
+export default versionModule;
 EOF
     
     success "Updated $FRONTEND_VERSION_FILE"
