@@ -9,6 +9,12 @@
       "type": "shell",
       "command": "env-local",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -27,6 +33,12 @@
       "type": "shell",
       "command": "universal-env-switch local --debug",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -42,6 +54,12 @@
       "type": "shell",
       "command": "env-staging-debug",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -57,6 +75,12 @@
       "type": "shell",
       "command": "env-prod-debug",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -77,6 +101,12 @@
       "command": "env-stop",
       "args": ["all"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -92,6 +122,12 @@
       "type": "shell",
       "command": "env-status",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -107,6 +143,12 @@
       "type": "shell",
       "command": "env-health",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -126,6 +168,12 @@
       "type": "shell",
       "command": "gvs",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -143,6 +191,12 @@
       "command": "gvb",
       "args": ["${input:versionType}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -198,6 +252,12 @@
       "command": "gffs",
       "args": ["${input:featureName}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -214,6 +274,12 @@
       "type": "shell",
       "command": "gfff",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -229,6 +295,12 @@
       "command": "ghfs",
       "args": ["${input:hotfixName}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always", 
@@ -245,6 +317,12 @@
       "type": "shell",
       "command": "ghff",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -260,6 +338,12 @@
       "command": "grs",
       "args": ["${input:releaseVersion}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -276,6 +360,12 @@
       "type": "shell",
       "command": "grf",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -294,6 +384,12 @@
       "type": "shell",
       "command": "read -p 'Feature name: ' FEATURE_NAME && gffs $FEATURE_NAME",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -309,6 +405,12 @@
       "type": "shell",
       "command": "read -p 'Hotfix name: ' HOTFIX_NAME && ghfs $HOTFIX_NAME",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -321,7 +423,7 @@
     },
 
     // ============================================================================
-    // DEVELOPMENT WORKFLOW TASKS
+    // DEVELOPMENT WORKFLOW TASKS (No shell config needed - standard commands)
     // ============================================================================
     {
       "label": "Build: Local Images",
@@ -358,6 +460,12 @@
       "type": "shell",
       "command": "env-logs",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -373,6 +481,12 @@
       "type": "shell",
       "command": "env-logs backend",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -388,6 +502,12 @@
       "type": "shell",
       "command": "env-logs frontend",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -408,6 +528,12 @@
       "command": "feat",
       "args": ["${input:commitMessage}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -423,6 +549,12 @@
       "command": "fix",
       "args": ["${input:commitMessage}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -438,6 +570,12 @@
       "command": "docs",
       "args": ["${input:commitMessage}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -453,6 +591,12 @@
       "command": "chore",
       "args": ["${input:commitMessage}"],
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -471,6 +615,12 @@
       "type": "shell",
       "command": "gs",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -485,6 +635,12 @@
       "type": "shell",
       "command": "uenv-status",
       "group": "test",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -496,7 +652,7 @@
     },
 
     // ============================================================================
-    // DIRECT DEBUG TASKS
+    // DIRECT DEBUG TASKS (No shell config needed - standard Docker commands)
     // ============================================================================
     {
       "label": "Start Local Debug Environment (Direct)",
@@ -528,7 +684,7 @@
     },
 
     // ============================================================================
-    // TESTING TASKS
+    // TESTING TASKS (No shell config needed - standard commands)
     // ============================================================================
     {
       "label": "Test: Backend Unit Tests",
@@ -615,6 +771,12 @@
       "type": "shell",
       "command": "universal-container-manager setup-worktrees",
       "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-i", "-c"]
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
