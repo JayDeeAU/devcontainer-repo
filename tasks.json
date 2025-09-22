@@ -1,0 +1,709 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ============================================================================
+    // ENVIRONMENT SETUP TASKS
+    // ============================================================================
+    {
+      "label": "Ensure Local Environment Running",
+      "type": "shell",
+      "command": "env-local",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "runOptions": {
+        // "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Ensure Local Debug Environment Running",
+      "type": "shell",
+      "command": "universal-env-switch local --debug",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Ensure Staging Debug Environment Running",
+      "type": "shell",
+      "command": "env-staging-debug",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Ensure Production Debug Environment Running",
+      "type": "shell",
+      "command": "env-prod-debug",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+
+    // ============================================================================
+    // CONTAINER MANAGEMENT TASKS
+    // ============================================================================
+    {
+      "label": "Stop All Environments",
+      "type": "shell",
+      "command": "env-stop",
+      "args": ["all"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Environment Status",
+      "type": "shell",
+      "command": "env-status",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Environment Health Check",
+      "type": "shell",
+      "command": "env-health",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+
+    // ============================================================================
+    // VERSION MANAGEMENT TASKS
+    // ============================================================================
+    {
+      "label": "Version Status",
+      "type": "shell",
+      "command": "gvs",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": [],
+      "detail": "Show current version status and branch information"
+    },
+    {
+      "label": "Manual Version Bump",
+      "type": "shell",
+      "command": "gvb",
+      "args": ["${input:versionType}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "detail": "Manually bump version (patch/minor/major)"
+    },
+    {
+      "label": "Set Specific Version",
+      "type": "shell",
+      "command": ".devcontainer/scripts/version-manager.sh",
+      "args": ["set", "${input:specificVersion}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "detail": "Set a specific version across all files"
+    },
+    {
+      "label": "Check Version Consistency",
+      "type": "shell",
+      "command": ".devcontainer/scripts/version-manager.sh",
+      "args": ["check"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": [],
+      "detail": "Check version consistency across all project files"
+    },
+
+    // ============================================================================
+    // ENHANCED GIT FLOW WITH VERSION MANAGEMENT
+    // ============================================================================
+    {
+      "label": "Start New Feature (Enhanced with Version)",
+      "type": "shell",
+      "command": "gffs",
+      "args": ["${input:featureName}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "detail": "Start new feature branch with automatic version assignment"
+    },
+    {
+      "label": "Finish Feature", 
+      "type": "shell",
+      "command": "gfff",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Finish current feature branch with enhanced git flow"
+    },
+    {
+      "label": "Start Hotfix (Enhanced with Version)",
+      "type": "shell",
+      "command": "ghfs",
+      "args": ["${input:hotfixName}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always", 
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "detail": "Start hotfix branch with automatic patch version assignment"
+    },
+    {
+      "label": "Finish Hotfix",
+      "type": "shell",
+      "command": "ghff",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Finish current hotfix branch with enhanced git flow"
+    },
+    {
+      "label": "Start Release (Enhanced with Version)",
+      "type": "shell",
+      "command": "grs",
+      "args": ["${input:releaseVersion}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "detail": "Start release branch with explicit version setting"
+    },
+    {
+      "label": "Finish Release",
+      "type": "shell",
+      "command": "grf",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Finish current release branch with enhanced git flow"
+    },
+
+    // ============================================================================
+    // LEGACY GIT FLOW TASKS (Interactive fallbacks)
+    // ============================================================================
+    {
+      "label": "Git Flow: Start Feature (Interactive)",
+      "type": "shell",
+      "command": "read -p 'Feature name: ' FEATURE_NAME && gffs $FEATURE_NAME",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Git Flow: Start Hotfix (Interactive)",
+      "type": "shell",
+      "command": "read -p 'Hotfix name: ' HOTFIX_NAME && ghfs $HOTFIX_NAME",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+
+    // ============================================================================
+    // DEVELOPMENT WORKFLOW TASKS
+    // ============================================================================
+    {
+      "label": "Build: Local Images",
+      "type": "shell",
+      "command": "docker compose -f docker/docker-compose.local.yml build",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: All Environment Images",
+      "type": "shell",
+      "command": "for env in local staging prod; do echo \"Building $env...\"; docker compose -f docker/docker-compose.$env.yml build; done",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Logs: Current Environment",
+      "type": "shell",
+      "command": "env-logs",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Logs: Backend Service",
+      "type": "shell",
+      "command": "env-logs backend",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Logs: Frontend Service",
+      "type": "shell",
+      "command": "env-logs frontend",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+
+    // ============================================================================
+    // CONVENTIONAL COMMITS TASKS
+    // ============================================================================
+    {
+      "label": "Commit: Feature",
+      "type": "shell",
+      "command": "feat",
+      "args": ["${input:commitMessage}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Create conventional commit with feat: prefix"
+    },
+    {
+      "label": "Commit: Fix",
+      "type": "shell",
+      "command": "fix",
+      "args": ["${input:commitMessage}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Create conventional commit with fix: prefix"
+    },
+    {
+      "label": "Commit: Docs",
+      "type": "shell",
+      "command": "docs",
+      "args": ["${input:commitMessage}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Create conventional commit with docs: prefix"
+    },
+    {
+      "label": "Commit: Chore",
+      "type": "shell",
+      "command": "chore",
+      "args": ["${input:commitMessage}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Create conventional commit with chore: prefix"
+    },
+
+    // ============================================================================
+    // PROJECT STATUS TASKS
+    // ============================================================================
+    {
+      "label": "Enhanced Git Status",
+      "type": "shell",
+      "command": "gs",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Show enhanced project status with container and version info"
+    },
+    {
+      "label": "Universal Environment Status",
+      "type": "shell",
+      "command": "uenv-status",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Show universal container management integration status"
+    },
+
+    // ============================================================================
+    // DIRECT DEBUG TASKS
+    // ============================================================================
+    {
+      "label": "Start Local Debug Environment (Direct)",
+      "type": "shell",
+      "command": "docker-compose -f docker/docker-compose.local.yml -f docker/docker-compose.local-debug.yml up -d",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Start local development with debugpy enabled on all services"
+    },
+    {
+      "label": "Stop Debug Environment (Direct)",
+      "type": "shell",
+      "command": "docker-compose -f docker/docker-compose.local.yml -f docker/docker-compose.local-debug.yml down",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "detail": "Stop debug environment"
+    },
+
+    // ============================================================================
+    // TESTING TASKS
+    // ============================================================================
+    {
+      "label": "Test: Backend Unit Tests",
+      "type": "shell",
+      "command": "docker compose -f docker/docker-compose.local.yml exec backend python -m pytest tests/ -v",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Frontend Unit Tests",
+      "type": "shell",
+      "command": "docker compose -f docker/docker-compose.local.yml exec frontend npm test",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: API Health Endpoints",
+      "type": "shell",
+      "command": "for port in 7510 7610 7710; do echo \"Testing port $port:\"; curl -s \"http://localhost:$port/health\" | jq . || echo \"Failed\"; done",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Version Endpoints",
+      "type": "shell",
+      "command": "for port in 7500 7600 7700; do echo \"Testing version endpoint on port $port:\"; curl -s \"http://localhost:$port/api/version\" | jq . || echo \"Failed\"; done",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": [],
+      "detail": "Test version API endpoints across all environments"
+    },
+
+    // ============================================================================
+    // MAINTENANCE TASKS
+    // ============================================================================
+    {
+      "label": "Maintenance: Clean Docker",
+      "type": "shell",
+      "command": "docker system prune -f && docker volume prune -f",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maintenance: Setup Worktrees",
+      "type": "shell",
+      "command": "universal-container-manager setup-worktrees",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maintenance: Update Project Dependencies",
+      "type": "shell",
+      "command": ".devcontainer/scripts/setup-project-dependencies.sh",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maintenance: Sync All Versions",
+      "type": "shell",
+      "command": ".devcontainer/scripts/version-manager.sh set ${input:syncVersion}",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "detail": "Sync all project files to a specific version"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "featureName",
+      "description": "Feature name (lowercase with hyphens)",
+      "default": "new-feature",
+      "type": "promptString"
+    },
+    {
+      "id": "hotfixName", 
+      "description": "Hotfix name (lowercase with hyphens)",
+      "default": "critical-fix",
+      "type": "promptString"
+    },
+    {
+      "id": "releaseVersion",
+      "description": "Release version (semantic versioning)",
+      "default": "1.0.0",
+      "type": "promptString"
+    },
+    {
+      "id": "versionType",
+      "description": "Version bump type",
+      "default": "patch",
+      "type": "pickString",
+      "options": [
+        "patch",
+        "minor", 
+        "major"
+      ]
+    },
+    {
+      "id": "specificVersion",
+      "description": "Specific version to set (e.g., 1.2.3)",
+      "default": "1.0.0",
+      "type": "promptString"
+    },
+    {
+      "id": "syncVersion",
+      "description": "Version to sync across all files",
+      "default": "1.0.0",
+      "type": "promptString"
+    },
+    {
+      "id": "commitMessage",
+      "description": "Commit message",
+      "default": "update implementation",
+      "type": "promptString"
+    }
+  ]
+}

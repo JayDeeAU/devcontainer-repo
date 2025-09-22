@@ -18,6 +18,21 @@ else
     echo "📁 Dotfiles directory already exists, skipping clone"
 fi
 
+# Setup VSCode workspace configuration
+echo "⚙️ Setting up VSCode workspace configuration..."
+
+# Create .vscode directory if it doesn't exist
+mkdir -p .vscode
+
+# Copy tasks.json from devcontainer to workspace .vscode folder
+if [ -f ".devcontainer/tasks.json" ]; then
+    echo "📋 Copying tasks.json to workspace .vscode folder..."
+    cp .devcontainer/tasks.json .vscode/tasks.json
+    echo "✅ Tasks configuration copied successfully"
+else
+    echo "⚠️ No tasks.json found in .devcontainer directory"
+fi
+
 # Setup project dependencies
 echo "📦 Setting up project dependencies..."
 chmod +x .devcontainer/scripts/setup-project-dependencies.sh
@@ -28,3 +43,4 @@ echo "🐳 Setting docker context..."
 docker context use default
 
 echo "✅ Environment setup completed"
+echo "💡 VSCode tasks are now available via Ctrl+F1"
