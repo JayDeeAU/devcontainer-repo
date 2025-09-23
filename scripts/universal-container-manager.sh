@@ -565,6 +565,10 @@ ensure_worktree_ready() {
             exit 1
         fi
     fi
+
+    if [[ -n "$USER" ]]; then
+        chown -R "$USER:$USER" "$worktree_dir" 2>/dev/null || true
+    fi
     
     if ! sync_worktree "$worktree_dir" "$target_branch"; then
         error "Failed to sync $env worktree"
