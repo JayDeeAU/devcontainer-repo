@@ -85,14 +85,16 @@ else
     readonly DEBUG="[D]"
 fi
 
-# ================================
-# 📝 Logging Utilities
-# ================================
-log()  { echo -e "[\033[1;34mINFO\033[0m] $*"; }
-warn() { echo -e "[\033[1;33mWARN\033[0m] $*"; }
-fail() { echo -e "[\033[1;31mFAIL\033[0m] $*"; }
-error() { echo -e "[\033[1;31mFAIL\033[0m] $*"; }
-success() { echo -e "[\033[1;32mCHECK\033[0m] $*"; }
+# # ================================
+# # 📝 Logging Utilities
+# # ================================
+# Logging functions with consistent formatting
+log() { echo -e "${BLUE}${INFO}${NC}  $*"; }
+success() { echo -e "${GREEN}${CHECK}${NC}  $*"; }
+warn() { echo -e "${YELLOW}${WARNING}${NC}  $*"; }
+error() { echo -e "${RED}${ERROR}${NC}  $*"; }
+header() { echo -e "${PURPLE}${ROCKET}${NC}  ${CYAN}$*${NC}"; }
+protect() { echo -e "${CYAN}${SHIELD}${NC}  $*"; }
 
 # ✅ FIXED: Universal port range assignments (no hardcoding)
 readonly PROD_PORT_BASE=7500
@@ -228,18 +230,6 @@ load_project_config() {
 
 # Load configuration first
 load_project_config
-
-# ============================================================================
-# UTILITY FUNCTIONS (PRESERVED from original)
-# ============================================================================
-
-# Logging functions with consistent formatting
-log() { echo -e "${BLUE}${INFO}${NC} $*"; }
-success() { echo -e "${GREEN}${CHECK}${NC} $*"; }
-warn() { echo -e "${YELLOW}${WARNING}${NC} $*"; }
-error() { echo -e "${RED}${ERROR}${NC} $*"; }
-header() { echo -e "${PURPLE}${ROCKET}${NC} ${CYAN}$*${NC}"; }
-protect() { echo -e "${CYAN}${SHIELD}${NC} $*"; }
 
 # ============================================================================
 # ENVIRONMENT DETECTION FUNCTIONS (ITEM 2 FIXES)
@@ -634,11 +624,43 @@ setup_worktrees() {
 switch_environment() {
     local target_env="$1"
     local debug_mode="false"
+    local should_push="false"
+    local force_build="false"
+    local auto_push="false"  # NEW: Auto-push without prompt
     
-    # Parse debug flag
-    if [[ "$2" == "--debug" ]]; then
-        debug_mode="true"
+    # Parse flags
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --debug)
+                debug_mode="true"
+                shift
+                ;;
+            --push)  # NEW: Explicit auto-push flag
+                auto_push="true"
+                shift
+                ;;
+            --no-push)
+                should_push="false"
+                shift
+                ;;
+            --build)
+                force_build="true"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+    
+    # Determine if we should offer to push (non-local, non-debug)
+    if [[ "$target_env" != "local" && "$debug_mode" == "false" ]]; then
+        should_push="true"
     fi
+    
+    # Export for use in build phase
+    export AUTO_PUSH="$auto_push"
     
     # Validate environment
     case "$target_env" in
@@ -654,41 +676,157 @@ switch_environment() {
     if ! check_docker_compose; then
         return 1
     fi
-    
+
     # Get compose files for this environment
     local compose_files=$(get_compose_file_for_env "$target_env" "$debug_mode")
     if ! check_compose_file "$compose_files"; then
         error "Required Docker Compose files not found for $target_env environment"
         return 1
     fi
+
+    # ============================================================================
+    # BUILD STRATEGY - Let Docker decide what needs rebuilding
+    # ============================================================================
+    local needs_build="false"
+    local build_reason=""
     
-    # Prepare worktrees if needed
+    # Staging/Local: Always run build (Docker cache handles optimization)
+    if [[ "$target_env" == "staging" || "$target_env" == "local" ]]; then
+        needs_build="true"
+        build_reason="Testing local changes (Docker will cache unchanged layers)"
+    
+    # Production: Pull from GHCR first, build only if needed
+    elif [[ "$target_env" == "prod" ]]; then
+        if [[ "$force_build" == "true" ]]; then
+            needs_build="true"
+            build_reason="Forced rebuild (--build flag) - use after merging to main"
+        else
+            # Try to pull stable images from GHCR
+            log "Pulling production images from GHCR..."
+            if docker compose -f $compose_files pull 2>/dev/null; then
+                needs_build="false"
+                success "Using stable images from GHCR"
+            else
+                warn "Could not pull from GHCR, will build locally"
+                needs_build="true"
+                build_reason="GHCR pull failed, building locally (Docker will cache)"
+            fi
+        fi
+    fi
+    
+    # Debug modes: Always build with source mounting enabled
+    if [[ "$debug_mode" == "true" ]]; then
+        needs_build="true"
+        build_reason="Debug mode - building with source mounting for investigation"
+    fi
+
+    # Prepare worktrees if needed (line 687 - existing code continues)
     ensure_worktree_ready "$target_env" "$debug_mode"
     
-    # Stop other environments first
-    log "Stopping other environments..."
-    for env in prod staging local; do
-        if [[ "$env" != "$target_env" && $(is_environment_running "$env") == "true" ]]; then
-            log "Stopping $env environment..."
-            docker compose -f "$(get_compose_file_for_env "$env" "false")" down --remove-orphans 2>/dev/null || true
-        fi
-    done
+    # ... rest of existing code ...
     
+    # Stop existing containers for this environment (if any)
+    if is_environment_running "$target_env"; then
+        log "Stopping existing $target_env containers..."
+        docker compose -f "$(get_compose_file_for_env "$target_env" "false")" down --remove-orphans 2>/dev/null || true
+    fi   
+
     # Set source directory for debug/local modes
     local source_dir=$(get_source_directory_for_env "$target_env" "$debug_mode")
     if [[ "$source_dir" != "none" ]]; then
         export SOURCE_DIR="$source_dir"
     fi
     
-    # Start the target environment
-    header "Starting $target_env Environment"
-    if [[ "$debug_mode" == "true" ]]; then
-        warn "${DEBUG} Debug mode enabled - source mounting active"
-        warn "Use for investigation only - make code changes in feature branches"
+    # ============================================================================
+    # BUILD PHASE - Docker shows live progress, intelligently uses cache
+    # ============================================================================
+    if [[ "$needs_build" == "true" ]]; then
+        header "Building $target_env Environment"
+        log "Reason: $build_reason"
+        
+        # Show appropriate warnings for debug modes
+        if [[ "$debug_mode" == "true" ]]; then
+            warn "${DEBUG} Debug mode enabled - source mounting active"
+            warn "Use for investigation/debugging only - NOT for code changes"
+            warn "Make code changes in feature branches using local environment"
+        fi
+        
+        log "Building images (showing live progress)..."
+        echo ""
+        
+        # Build with live output (don't capture - so you see progress)
+        if ! docker compose -f $compose_files build; then
+            error "Failed to build $target_env environment"
+            return 1
+        fi
+        
+        echo ""
+        success "Build completed successfully"
+        
+        # ============================================================================
+        # PUSH TO GHCR - Only for prod/staging in normal mode (with user control)
+        # ============================================================================
+        if [[ "$should_push" == "true" ]]; then
+            echo ""
+            header "Syncing to GHCR"
+            
+            # Check GHCR authentication first
+            if ! check_ghcr_auth; then
+                warn "Not authenticated to GHCR - images won't be available on other machines"
+                warn "Run: ghcr-login  (or see ghcr-status for details)"
+                warn "Continuing with local images only..."
+            else
+                # Determine if we should push (prompt or auto)
+                local do_push="n"
+                
+                if [[ "${AUTO_PUSH:-false}" == "true" ]]; then
+                    log "Auto-pushing to GHCR (--push flag enabled)..."
+                    do_push="y"
+                else
+                    echo ""
+                    log "Push images to GHCR? This makes them available on all machines."
+                    read -p "Push to GHCR? [Y/n] " -n 1 -r do_push
+                    echo ""
+                    do_push=${do_push:-y}  # Default to yes if just Enter pressed
+                fi
+                
+                if [[ "$do_push" =~ ^[Yy]$ ]]; then
+                    log "Pushing to GitHub Container Registry..."
+                    log "(Showing minimal output - this may take a moment)"
+                    echo ""
+                    
+                    # Push with quiet flag to reduce output noise
+                    # Filter out verbose layer messages, keep only important info
+                    if docker compose -f $compose_files push --quiet 2>&1 | \
+                       grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
+                       grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true; then
+                        echo ""
+                        success "Images pushed to GHCR successfully!"
+                        success "→ Images are now available across all your machines"
+                    else
+                        # If grep filtered everything, that's actually success
+                        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                            echo ""
+                            success "Images pushed to GHCR successfully!"
+                            success "→ Images are now available across all your machines"
+                        else
+                            warn "Push completed with warnings - check output above"
+                        fi
+                    fi
+                else
+                    log "Skipping GHCR push - images only available locally"
+                    log "To push later: universal-container-manager push $target_env"
+                fi
+            fi
+        fi
     fi
     
+    # ============================================================================
+    # START PHASE
+    # ============================================================================
+    header "Starting $target_env Environment"
     log "Using compose files: $compose_files"
-    if ! docker compose -f $compose_files up -d --build; then
+    if ! docker compose -f $compose_files up -d; then
         error "Failed to start $target_env environment"
         return 1
     fi
@@ -698,6 +836,10 @@ switch_environment() {
     show_environment_info "$target_env" "$debug_mode" "$base_port"
     
     success "Successfully switched to $target_env environment"
+    if [[ "$should_push" == "true" ]]; then
+        echo ""
+        success "Images synchronized to GHCR - available on all machines"
+    fi
     return 0
 }
 
@@ -718,7 +860,7 @@ show_environment_info() {
     
     echo "========================="
     echo -e "${BRANCH} Target Branch: ${CYAN}$(get_target_branch_for_env "$env")${NC}"
-    echo -e "${GEAR} Environment: ${CYAN}$env${NC}"
+    echo -e "${GEAR}  Environment: ${CYAN}$env${NC}"
     echo -e "${NETWORK} Port Range: ${CYAN}${base_port}xx${NC}"
     echo ""
     echo -e "${CONTAINER} Container Prefix: ${CYAN}${CONTAINER_PREFIX}*-$env${NC}"
@@ -735,6 +877,76 @@ show_environment_info() {
         echo -e "${PACKAGE} Built Images: ${CYAN}No source mounting${NC}"
     fi
     echo ""
+}
+
+# ============================================================================
+# GHCR MANAGEMENT FUNCTIONS
+# ============================================================================
+
+check_ghcr_auth() {
+    # Try a simple operation that requires auth
+    docker pull ghcr.io/jaydeeau/test 2>&1 | grep -q "denied" && return 1
+    return 0
+}
+
+push_to_ghcr() {
+    local env="$1"
+    
+    if [[ -z "$env" ]]; then
+        error "Usage: universal-container-manager push [env]"
+        return 1
+    fi
+    
+    header "Manually Pushing $env Images to GHCR"
+    echo "========================================"
+    echo ""
+    
+    local compose_files=$(get_compose_file_for_env "$env" "false")
+    
+    log "Building images..."
+    if ! docker compose -f $compose_files build; then
+        error "Failed to build images"
+        return 1
+    fi
+    
+    log "Pushing to GHCR..."
+    if ! check_ghcr_auth; then
+        error "Not authenticated to GHCR"
+        echo "Authenticate with: echo \"\$GHCR_TOKEN\" | docker login ghcr.io -u JayDeeAU --password-stdin"
+        return 1
+    fi
+    
+    if docker compose -f $compose_files push; then
+        success "Images pushed to GHCR successfully!"
+        echo ""
+        docker compose -f $compose_files images
+    else
+        error "Failed to push images"
+        return 1
+    fi
+}
+
+pull_from_ghcr() {
+    local env="$1"
+    
+    if [[ -z "$env" ]]; then
+        error "Usage: universal-container-manager pull [env]"
+        return 1
+    fi
+    
+    header "Pulling $env Images from GHCR"
+    echo "========================================"
+    echo ""
+    
+    local compose_files=$(get_compose_file_for_env "$env" "false")
+    
+    log "Pulling from GHCR..."
+    if docker compose -f $compose_files pull; then
+        success "Images pulled successfully!"
+    else
+        error "Failed to pull images"
+        return 1
+    fi
 }
 
 show_status() {
@@ -822,44 +1034,64 @@ show_help() {
     echo ""
     echo "${SHIELD}  SMART ISOLATION: Each environment runs independently on different ports"
     echo "${DEBUG}  DEBUG MODES: Source mounting for investigation (not code changes)"
-    echo "${PACKAGE}  PRODUCTION BUILDS: Optimized images by default"
+    echo "${PACKAGE}  INTELLIGENT CACHING: Docker rebuilds only changed layers"
     echo "${GEAR}  PROJECT AGNOSTIC: Works with any project via configuration"
     echo ""
     echo "Current Project: ${CYAN}$PROJECT_NAME${NC}"
     echo "Container Prefix: ${CYAN}$CONTAINER_PREFIX${NC}"
     echo ""
     echo "Environment Strategy:"
-    echo "  ${PACKAGE} Production/Staging: Built images (Dockerfile.prod), optimized commands"
-    echo "  ${DEBUG} Debug Modes: Source mounting (/workspaces/$PROJECT_NAME), VSCode debugging"
-    echo "  ${GEAR} Local: Always source mounted (Dockerfile.dev) for active development"
+    echo "  ${GEAR} Local:              Builds with source mounted (active development)"
+    echo "  ${PACKAGE} Staging:            Builds to test local changes (pre-production testing)"
+    echo "  ${DEBUG} Staging --debug:    Builds with worktree mounted (investigation only)"
+    echo "  ${PACKAGE} Production:         Pulls from GHCR stable images (deployment)"
+    echo "  ${DEBUG} Production --debug: Builds with worktree mounted (investigation only)"
     echo ""
     echo "Port Assignments:"
-    echo "  Production:  7500-7599  (built images by default, 7511 for debug)"
-    echo "  Staging:     7600-7699  (built images by default, 7611 for debug)"
-    echo "  Local:       7700-7799  (always source mounted, 7711 for debug)"
+    echo "  Production:  7500-7599  (stable GHCR images, 7511 for debug)"
+    echo "  Staging:     7600-7699  (test local changes, 7611 for debug)"
+    echo "  Local:       7700-7799  (active development, 7711 for debug)"
     echo ""
-    echo "Branch → Environment Mapping (ITEM 2 ENHANCED):"
+    echo "Branch → Environment Mapping:"
     echo "  main/master  → Production environment"
     echo "  develop      → Staging environment"
     echo "  feature/*    → Local development environment"
-    echo "  hotfix/*     → Local development environment ✅ FIXED"
-    echo "  release/*    → Local development environment ✅ FIXED"
-    echo "  bugfix/*     → Local development environment ✅ FIXED"
+    echo "  hotfix/*     → Local development environment"
+    echo "  release/*    → Local development environment"
+    echo "  bugfix/*     → Local development environment"
     echo "  *            → Local development environment (fallback)"
     echo ""
     echo "Commands:"
-    echo "  switch [env] [--debug]  Switch to environment (prod, staging, local)"
+    echo "  switch [env] [--debug] [--build] [--push] [--no-push]"
+    echo "                          Switch to environment (prod, staging, local)"
+    echo "                          --debug: Enable debug mode with source mounting"
+    echo "                          --build: Force rebuild check (for prod after main merge)"
+    echo "                          --push: Auto-push to GHCR without prompting"
+    echo "                          --no-push: Skip GHCR push entirely (local testing)"
     echo "  status                  Show current environment status"
     echo "  health                  Run health checks on current environment"
     echo "  logs [service]          Show logs for environment or specific service"
     echo "  stop [env]              Stop specific environment or all environments"
+    echo "  push [env]              Manually build and push images to GHCR"
+    echo "  pull [env]              Pull latest images from GHCR"
     echo "  setup-worktrees         Set up git worktrees for debug modes"
     echo "  help                    Show this help message"
     echo ""
-    echo "Setup Commands:"
-    echo "  Use config generator to create .container-config.json:"
-    echo "    .devcontainer/scripts/config-generator.sh [template]"
-    echo "  Available templates: default, fullstack, simple, microservices"
+    echo "Common Workflows:"
+    echo "  Active development:      env-local"
+    echo "  Test before prod:        env-staging"
+    echo "  Deploy to production:    env-prod"
+    echo "  Update prod after merge: env-prod --build"
+    echo "  Push to GHCR (no prompt): env-staging --push"
+    echo "  Test locally only:       env-staging --no-push"
+    echo "  Debug staging issue:     env-staging-debug"
+    echo "  Debug production issue:  env-prod-debug"
+    echo ""
+    echo "Build & Push Behavior:"
+    echo "  • Build output: Live progress shown in real-time"
+    echo "  • Push output: Minimal, filtered to reduce noise"
+    echo "  • Push prompt: Interactive confirmation (unless --push flag used)"
+    echo "  • Docker cache: Automatically used for unchanged layers"
     echo ""
 }
 
@@ -872,7 +1104,8 @@ main() {
     
     case "$command" in
         switch)
-            switch_environment "$2" "$3"
+            shift  # Remove "switch" command
+            switch_environment "$@"  # Pass all remaining arguments
             ;;
         status)
             show_status
@@ -881,13 +1114,20 @@ main() {
             run_health_check
             ;;
         logs)
-            show_logs "$2"
+            shift  # Remove "logs" command
+            show_logs "$@"  # Pass service name if provided
             ;;
         stop)
             stop_environment "$2"
             ;;
         setup-worktrees)
             setup_worktrees
+            ;;
+        push)
+            push_to_ghcr "$2"
+            ;;
+        pull)
+            pull_from_ghcr "$2"
             ;;
         help|--help|-h)
             show_help
