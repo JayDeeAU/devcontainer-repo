@@ -695,11 +695,12 @@ switch_environment() {
         needs_build="true"
         build_reason="Testing local changes (Docker will cache unchanged layers)"
     
-    # Production: Pull from GHCR first, build only if needed
+    # Production: Check --build flag FIRST, then pull from GHCR
     elif [[ "$target_env" == "prod" ]]; then
         if [[ "$force_build" == "true" ]]; then
             needs_build="true"
             build_reason="Forced rebuild (--build flag) - use after merging to main"
+            log "Skipping GHCR pull - forcing local build as requested"
         else
             # Try to pull stable images from GHCR
             log "Pulling production images from GHCR..."
