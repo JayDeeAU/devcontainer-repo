@@ -763,64 +763,7 @@ switch_environment() {
         echo ""
         success "Build completed successfully"
         
-        # ============================================================================
-        # PUSH TO GHCR - Only for prod/staging in normal mode (with user control)
-        # ============================================================================
-        if [[ "$should_push" == "true" ]]; then
-            echo ""
-            header "Syncing to GHCR"
-            
-            # Check GHCR authentication first
-            if ! check_ghcr_auth; then
-                warn "Not authenticated to GHCR - images won't be available on other machines"
-                warn "Run: ghcr-login  (or see ghcr-status for details)"
-                warn "Continuing with local images only..."
-            else
-                # Determine if we should push (prompt or auto)
-                local do_push="n"
-                
-                if [[ "${AUTO_PUSH:-false}" == "true" ]]; then
-                    log "Auto-pushing to GHCR (--push flag enabled)..."
-                    do_push="y"
-                else
-                    echo ""
-                    log "Push images to GHCR? This makes them available on all machines."
-                    read -p "Push to GHCR? [Y/n] " -n 1 -r do_push
-                    echo ""
-                    do_push=${do_push:-y}  # Default to yes if just Enter pressed
-                fi
-                
-                if [[ "$do_push" =~ ^[Yy]$ ]]; then
-                    log "Pushing to GitHub Container Registry..."
-                    log "(Showing minimal output - this may take a moment)"
-                    echo ""
-                    
-                    # Push with quiet flag to reduce output noise
-                    # Filter out verbose layer messages, keep only important info
-                    if docker compose -f $compose_files push --quiet 2>&1 | \
-                       grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
-                       grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true; then
-                        echo ""
-                        success "Images pushed to GHCR successfully!"
-                        success "→ Images are now available across all your machines"
-                    else
-                        # If grep filtered everything, that's actually success
-                        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-                            echo ""
-                            success "Images pushed to GHCR successfully!"
-                            success "→ Images are now available across all your machines"
-                        else
-                            warn "Push completed with warnings - check output above"
-                        fi
-                    fi
-                else
-                    log "Skipping GHCR push - images only available locally"
-                    log "To push later: universal-container-manager push $target_env"
-                fi
-            fi
-        fi
     fi
-    
     # ============================================================================
     # START PHASE
     # ============================================================================
@@ -836,10 +779,64 @@ switch_environment() {
     show_environment_info "$target_env" "$debug_mode" "$base_port"
     
     success "Successfully switched to $target_env environment"
-    if [[ "$should_push" == "true" ]]; then
+    
+    # ============================================================================
+    # PUSH TO GHCR - After successful startup (non-local, non-debug only)
+    # ============================================================================
+    if [[ "$should_push" == "true" && "$needs_build" == "true" ]]; then
         echo ""
-        success "Images synchronized to GHCR - available on all machines"
+        header "Sync to GHCR"
+        
+        # Check GHCR authentication first
+        if ! check_ghcr_auth; then
+            warn "Not authenticated to GHCR - images won't be available on other machines"
+            warn "Run: ghcr-login  (or see ghcr-status for details)"
+            log "Images are only available locally on this machine"
+        else
+            # Determine if we should push (prompt or auto)
+            local do_push="n"
+            
+            if [[ "${AUTO_PUSH:-false}" == "true" ]]; then
+                log "Auto-pushing to GHCR (--push flag enabled)..."
+                do_push="y"
+            else
+                echo ""
+                log "Environment is running successfully!"
+                log "Push images to GHCR to make them available on all machines?"
+                read -p "Push to GHCR? [Y/n] " -n 1 -r do_push
+                echo ""
+                do_push=${do_push:-y}  # Default to yes if just Enter pressed
+            fi
+            
+            if [[ "$do_push" =~ ^[Yy]$ ]]; then
+                log "Pushing to GitHub Container Registry..."
+                log "(Showing minimal output - this may take a moment)"
+                echo ""
+                
+                # Push with filtered output to reduce noise
+                if docker compose -f $compose_files push 2>&1 | \
+                   grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
+                   grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true; then
+                    echo ""
+                    success "Images pushed to GHCR successfully!"
+                    success "→ Images are now available across all your machines"
+                else
+                    # If grep filtered everything, that's actually success
+                    if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                        echo ""
+                        success "Images pushed to GHCR successfully!"
+                        success "→ Images are now available across all your machines"
+                    else
+                        warn "Push completed with warnings - check output above"
+                    fi
+                fi
+            else
+                log "Skipping GHCR push - images only available locally"
+                log "To push later: universal-container-manager push $target_env"
+            fi
+        fi
     fi
+    
     return 0
 }
 
@@ -864,7 +861,7 @@ show_environment_info() {
     echo -e "${NETWORK} Port Range: ${CYAN}${base_port}xx${NC}"
     echo ""
     echo -e "${CONTAINER} Container Prefix: ${CYAN}${CONTAINER_PREFIX}*-$env${NC}"
-    echo -e "${INFO} Project: ${CYAN}$PROJECT_NAME${NC}"
+    echo -e "${INFO}  Project: ${CYAN}$PROJECT_NAME${NC}"
     
     local source_dir=$(get_source_directory_for_env "$env" "$debug_mode")
     if [[ "$source_dir" != "none" ]]; then
