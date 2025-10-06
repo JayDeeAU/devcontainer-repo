@@ -632,19 +632,19 @@ switch_environment() {
     shift
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --debug)
+            --debug|debug)
                 debug_mode="true"
                 shift
                 ;;
-            --push)  # NEW: Explicit auto-push flag
+            --push|push)
                 auto_push="true"
                 shift
                 ;;
-            --no-push)
+            --no-push|no-push)
                 should_push="false"
                 shift
                 ;;
-            --build)
+            --build|build)
                 force_build="true"
                 shift
                 ;;
@@ -1060,30 +1060,33 @@ show_help() {
     echo "  *            → Local development environment (fallback)"
     echo ""
     echo "Commands:"
-    echo "  switch [env] [--debug] [--build] [--push] [--no-push]"
-    echo "                          Switch to environment (prod, staging, local)"
-    echo "                          --debug: Enable debug mode with source mounting"
-    echo "                          --build: Force rebuild check (for prod after main merge)"
-    echo "                          --push: Auto-push to GHCR without prompting"
-    echo "                          --no-push: Skip GHCR push entirely (local testing)"
-    echo "  status                  Show current environment status"
-    echo "  health                  Run health checks on current environment"
-    echo "  logs [service]          Show logs for environment or specific service"
-    echo "  stop [env]              Stop specific environment or all environments"
-    echo "  push [env]              Manually build and push images to GHCR"
-    echo "  pull [env]              Pull latest images from GHCR"
-    echo "  setup-worktrees         Set up git worktrees for debug modes"
-    echo "  help                    Show this help message"
+    echo "  switch [env] [flags...]     Switch to environment (prod, staging, local)"
+    echo ""
+    echo "Flags (can use '--flag' or 'flag' format):"
+    echo "    --debug, debug            Enable debug mode with source mounting"
+    echo "    --build, build            Force rebuild check (for prod after main merge)"
+    echo "    --push, push              Auto-push to GHCR without prompting"
+    echo "    --no-push, no-push        Skip GHCR push entirely (local testing)"
+    echo ""
+    echo "Other Commands:"
+    echo "  status                      Show current environment status"
+    echo "  health                      Run health checks on current environment"
+    echo "  logs [service]              Show logs for environment or specific service"
+    echo "  stop [env]                  Stop specific environment or all environments"
+    echo "  push [env]                  Manually build and push images to GHCR"
+    echo "  pull [env]                  Pull latest images from GHCR"
+    echo "  setup-worktrees             Set up git worktrees for debug modes"
+    echo "  help                        Show this help message"
     echo ""
     echo "Common Workflows:"
-    echo "  Active development:      env-local"
-    echo "  Test before prod:        env-staging"
-    echo "  Deploy to production:    env-prod"
-    echo "  Update prod after merge: env-prod --build"
-    echo "  Push to GHCR (no prompt): env-staging --push"
-    echo "  Test locally only:       env-staging --no-push"
-    echo "  Debug staging issue:     env-staging-debug"
-    echo "  Debug production issue:  env-prod-debug"
+    echo "  Active development:         env-local"
+    echo "  Test before prod:           env-staging"
+    echo "  Deploy to production:       env-prod"
+    echo "  Update prod after merge:    env-prod --build  (or: env-prod build)"
+    echo "  Push to GHCR (no prompt):   env-staging --push  (or: env-staging push)"
+    echo "  Test locally only:          env-staging --no-push"
+    echo "  Debug staging issue:        env-staging-debug"
+    echo "  Debug production issue:     env-prod-debug"
     echo ""
     echo "Build & Push Behavior:"
     echo "  • Build output: Live progress shown in real-time"
