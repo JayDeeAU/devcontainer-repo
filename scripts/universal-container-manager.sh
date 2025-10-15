@@ -685,34 +685,47 @@ switch_environment() {
     fi
 
     # ============================================================================
-    # BUILD STRATEGY - Let Docker decide what needs rebuilding
+    # BUILD STRATEGY - Build only when explicitly requested or necessary
     # ============================================================================
     local needs_build="false"
     local build_reason=""
     
-    # Staging/Local: Always run build (Docker cache handles optimization)
-    if [[ "$target_env" == "staging" || "$target_env" == "local" ]]; then
+    # All environments: Only build if --build flag provided
+    if [[ "$force_build" == "true" ]]; then
         needs_build="true"
-        build_reason="Testing local changes (Docker will cache unchanged layers)"
-    
-    # Production: Check --build flag FIRST, then pull from GHCR
-    elif [[ "$target_env" == "prod" ]]; then
-        if [[ "$force_build" == "true" ]]; then
-            needs_build="true"
-            build_reason="Forced rebuild (--build flag) - use after merging to main"
+        build_reason="Forced rebuild (--build flag) - rebuilding with latest changes"
+        if [[ "$target_env" == "prod" ]]; then
             log "Skipping GHCR pull - forcing local build as requested"
-        else
-            # Try to pull stable images from GHCR
-            log "Pulling production images from GHCR..."
-            if docker compose -f $compose_files pull 2>/dev/null; then
-                needs_build="false"
-                success "Using stable images from GHCR"
-            else
-                warn "Could not pull from GHCR, will build locally"
-                needs_build="true"
-                build_reason="GHCR pull failed, building locally (Docker will cache)"
-            fi
         fi
+    
+    # Production without --build: Try to pull from GHCR
+    elif [[ "$target_env" == "prod" ]]; then
+        log "Pulling production images from GHCR..."
+        if docker compose -f $compose_files pull 2>/dev/null; then
+            needs_build="false"
+            success "Using stable images from GHCR"
+        else
+            warn "Could not pull from GHCR, will build locally"
+            needs_build="true"
+            build_reason="GHCR pull failed, building locally (Docker will cache)"
+        fi
+    
+    # Staging/Local without --build: Try to pull from GHCR, or use local if exists
+    elif [[ "$target_env" == "staging" ]]; then
+        log "Attempting to pull staging images from GHCR..."
+        if docker compose -f $compose_files pull 2>/dev/null; then
+            needs_build="false"
+            success "Using images from GHCR (use --build to rebuild with local changes)"
+        else
+            log "No images in GHCR or pull failed, will use local images if available"
+            needs_build="false"
+            build_reason="Using local images (use --build to rebuild)"
+        fi
+    
+    # Local environment: Never pull, just use local images
+    else
+        needs_build="false"
+        log "Using local images (use --build to rebuild with latest changes)"
     fi
     
     # Debug modes: Always build with source mounting enabled
