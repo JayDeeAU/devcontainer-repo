@@ -630,6 +630,146 @@ fi
 
 ---
 
+## Docker Compose Configuration Requirements
+
+### Pull Policy Configuration
+
+When using the Universal Container Manager with your project's docker-compose files, **it is critical** to configure the `pull_policy` correctly for each environment to avoid using stale images.
+
+#### Problem: Stale Images After Build
+
+Without proper `pull_policy` settings, Docker Compose may pull old images from GHCR **even when you just built fresh images locally**, causing your latest code changes to not appear in running containers.
+
+#### Solution: Environment-Specific Pull Policies
+
+**For Staging Environment (`docker-compose.staging.yml`):**
+```yaml
+services:
+  backend:
+    image: ghcr.io/yourorg/project/backend:staging
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build  # Always build when context available, don't pull
+    ports:
+      - "7610:8000"
+
+  frontend:
+    image: ghcr.io/yourorg/project/frontend:staging
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    pull_policy: build  # Always build when context available, don't pull
+    ports:
+      - "7600:3000"
+```
+
+**For Local Environment (`docker-compose.local.yml`):**
+```yaml
+services:
+  backend:
+    image: ghcr.io/yourorg/project/backend:local
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    pull_policy: build  # or "never" - always use local builds
+    ports:
+      - "7710:8000"
+    volumes:
+      - ./backend:/app  # Source mounting for hot reload
+
+  frontend:
+    image: ghcr.io/yourorg/project/frontend:local
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    pull_policy: build  # or "never" - always use local builds
+    ports:
+      - "7700:3000"
+    volumes:
+      - ./frontend:/app  # Source mounting for hot reload
+```
+
+**For Production Environment (`docker-compose.prod.yml`):**
+```yaml
+services:
+  backend:
+    image: ghcr.io/yourorg/project/backend:prod
+    pull_policy: always  # Always pull stable images from GHCR
+    # No build section - production pulls pre-built images
+    ports:
+      - "7510:8000"
+
+  frontend:
+    image: ghcr.io/yourorg/project/frontend:prod
+    pull_policy: always  # Always pull stable images from GHCR
+    # No build section - production pulls pre-built images
+    ports:
+      - "7500:3000"
+```
+
+#### Pull Policy Options Explained
+
+- **`build`** (Recommended for staging/local):
+  - Tries to build if build context is available
+  - Falls back to pulling if build context not available
+  - Best for development machines with source code
+
+- **`never`** (Alternative for staging/local):
+  - Never pulls from registry, always uses local images
+  - Fails if image doesn't exist locally
+  - More explicit than `build` but less flexible
+
+- **`always`** (Recommended for production):
+  - Always pulls latest image from registry before starting
+  - Ensures you're running the latest pushed version
+  - Required for production deployments
+
+- **`if_not_present`** (Default behavior):
+  - Only pulls if image doesn't exist locally
+  - Can cause issues if local image is stale
+
+- **`missing`**:
+  - Similar to `if_not_present`
+  - Only pulls if no image found locally
+
+#### Universal Container Manager Integration
+
+The Universal Container Manager build logic works as follows:
+
+```bash
+# Staging/Local
+env-staging          # Uses existing images (no build, no push)
+env-staging --build  # Builds fresh, prompts to push to GHCR
+
+# Production
+env-prod             # Pulls from GHCR (stable images)
+env-prod --build     # Builds locally, prompts to push
+
+# Local
+env-local            # Uses existing images (fast restart)
+env-local --build    # Rebuilds with latest changes
+```
+
+With `pull_policy: build` in staging/local compose files:
+- `docker compose build` creates fresh local images
+- `docker compose up -d` uses those fresh local images (not GHCR)
+- Push to GHCR happens after verification
+- Other machines can pull from GHCR
+
+#### Migration Checklist
+
+If you're experiencing stale image issues, check:
+
+1. ✅ Add `pull_policy: build` to all services in `docker-compose.staging.yml`
+2. ✅ Add `pull_policy: build` to all services in `docker-compose.local.yml`
+3. ✅ Add `pull_policy: always` to all services in `docker-compose.prod.yml`
+4. ✅ Remove any `pull_policy` from production if it has `build` sections
+5. ✅ Test: `env-staging --build` should use freshly built images
+6. ✅ Test: `env-prod` should pull from GHCR
+
+---
+
 ## Maintenance and Extension Guide
 
 ### Adding a New Feature
