@@ -1,89 +1,92 @@
-# DevContainer Environment - Comprehensive Technical Documentation
+# DevContainer Repository - Technical Documentation
+
+> **📌 DevContainer Implementation Guide**: This document is for DevOps engineers, system administrators, and developers extending the devcontainer infrastructure. For daily development workflows, see [QUICK-START.md](QUICK-START.md).
+
+---
+
+## 📚 Documentation Map
+
+**For Users:**
+- [INDEX.md](INDEX.md) - Documentation overview and navigation
+- [QUICK-START.md](QUICK-START.md) - 5-minute getting started guide
+- [PROJECT-SETUP.md](PROJECT-SETUP.md) - One-time project configuration
+- [WORKFLOWS-QUICK-REFERENCE.md](WORKFLOWS-QUICK-REFERENCE.md) - Command lookup table
+- [WORKFLOWS-DETAILED-GUIDE.md](WORKFLOWS-DETAILED-GUIDE.md) - Complete workflow scenarios
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture overview
+
+**For Maintainers (this document):**
+- DevContainer feature system implementation
+- Docker Compose configuration requirements
+- Debug worktree management
+- Feature development guidelines
+- Extension and maintenance procedures
+
+---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Quick Start Instructions](#quick-start-instructions)
-3. [Architecture Deep Dive](#architecture-deep-dive)
-4. [Feature System Implementation](#feature-system-implementation)
-5. [Script System Analysis](#script-system-analysis)
-6. [Maintenance and Extension Guide](#maintenance-and-extension-guide)
-7. [Implementation Status](#implementation-status)
+2. [Feature System Architecture](#feature-system-architecture)
+3. [Docker Compose Configuration Requirements](#docker-compose-configuration-requirements)
+4. [Debug Worktree Management](#debug-worktree-management)
+5. [Feature Development Guide](#feature-development-guide)
+6. [Maintenance Procedures](#maintenance-procedures)
 
 ---
 
 ## Overview
 
-This is a **modern feature-based DevContainer environment** that has been migrated from legacy Dockerfile architecture to a modular, reusable system. The environment supports Python, Node.js, and full-stack development workflows with automated project setup and persistent configurations.
+This is a **modern feature-based DevContainer environment** designed for universal cross-project use. The environment supports Python, Node.js, and full-stack development workflows with automated project setup and persistent configurations.
 
-### What Currently Works ✅
+### Core Philosophy
+
+- **Universal Design**: Works identically across all projects - clone once, use everywhere
+- **Feature-Based**: Modular components, not monolithic Dockerfiles
+- **Project-Agnostic**: Configuration via `.container-config.json` (generated per project)
+- **Developer-Focused**: Hide complexity, expose simple commands
+
+> **📌 Universal Repository**: This is the `devcontainer-repo` that gets cloned into your project's `.devcontainer/` directory. The same code works for any project - only `.container-config.json` differs per project.
+
+### How It Works
+
+1. **Clone devcontainer-repo** into your project: `.devcontainer/`
+2. **Generate config** for your project: `config-generator.sh`
+3. **Customize features** (optional): Edit `devcontainer.json`
+4. **Use everywhere**: Same commands, scripts, and workflows across all projects
+
+### What This Environment Provides
 
 - **Base Environment**: Python 3.12 + Node.js 22 in Debian Bookworm
 - **Package Managers**: Poetry (Python) and pnpm (Node.js) 
 - **Docker Integration**: Docker-outside-of-Docker for container development
 - **Git Integration**: GitHub CLI with SSH key mounting
-- **Organizational Standards**: Fonts, networking tools, development utilities
-- **Project Detection**: Automatic setup for Poetry and pnpm projects
 - **Extension Management**: VS Code extension synchronization with backup/restore
 - **AI Integration**: Claude Code CLI with persistent credentials
+- **Universal Container Manager**: Multi-environment orchestration (prod/staging/local)
+- **Version Manager**: Sequential semantic versioning for parallel development
 
 ---
 
-## Quick Start Instructions
-
-### For New Projects
-
-1. **Copy DevContainer Configuration**
-   ```bash
-   # In your new project directory
-   cp -r /path/to/this-repo/.devcontainer ./
-   ```
-
-2. **Open in VS Code**
-   ```bash
-   code .
-   # Ctrl+Shift+P -> "Dev Containers: Reopen in Container"
-   ```
-
-3. **Verify Installation**
-   ```bash
-   # After container builds (2-5 minutes)
-   python --version    # Should show Python 3.12.x
-   node --version     # Should show Node.js 22.x
-   docker --version   # Should work (Docker-outside-of-Docker)
-   gh --version       # Should show GitHub CLI
-   
-   # Test project dependency detection
-   setup-project-dependencies
-   ```
-
-### Environment Variables
-
-The container automatically configures:
-- `GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"`
-- Shell default to `zsh`
-- Python interpreter path: `/usr/local/python/current/bin/python`
-
----
-
-## Architecture Deep Dive
+## Feature System Architecture
 
 ### Modern Feature-Based Design
 
-The architecture uses DevContainer's **feature system** instead of monolithic Dockerfiles. This provides modularity, reusability, and easier maintenance.
+The architecture uses DevContainer's **feature system** instead of monolithic Dockerfiles. This provides modularity, reusability, and easier maintenance across multiple projects.
 
 ```
 .devcontainer/
 ├── devcontainer.json              # Main configuration file
 ├── features/                      # Custom feature definitions
-│   ├── codemian-standards/        # ✅ Implemented
-│   ├── host-ssh-access/           # ✅ Implemented  
-│   ├── extension-manager/         # ✅ Implemented
-│   ├── claude-code/              # ✅ Implemented
-│   └── git-workflows/            # 🚧 Planned (not implemented)
+│   ├── organizational-standards/  # ✅ Development tools & utilities
+│   ├── host-ssh-access/           # ✅ SSH key mounting  
+│   ├── extension-manager/         # ✅ VS Code extension sync
+│   └── claude-code/              # ✅ AI assistance integration
 └── scripts/                       # Environment and project setup
     ├── setup-environment.sh       # Main post-create setup
     ├── setup-project-dependencies.sh
+    ├── universal-container-manager.sh
+    ├── version-manager.sh
+    ├── config-generator.sh
     ├── sync-extensions.sh
     ├── list-extensions.sh
     └── restore-extensions.sh
@@ -129,7 +132,7 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 
 #### Internal Features (Custom)
 ```json
-"./features/codemian-standards": {
+"./features/organizational-standards": {
   "installFonts": false,              // Disabled for faster builds
   "installNetworkTools": true,
   "installDevTools": true
@@ -176,19 +179,19 @@ features/<feature-name>/
 
 ### Feature Implementation Deep Dive
 
-#### 1. Codemian Standards Feature
+#### 1. Organizational Standards Feature
 
-**Location**: `features/codemian-standards/`
+**Location**: `features/organizational-standards/`
 
-**Purpose**: Provides organizational standards and essential development tools
+**Purpose**: Provides organizational standards and essential development tools (customize for your organization)
 
 **devcontainer-feature.json**:
 ```json
 {
-  "id": "codemian-standards",
+  "id": "organizational-standards",
   "version": "1.0.0",
-  "name": "Codemian Organizational Standards",
-  "description": "Standard fonts, networking tools, and debugging utilities for all Codemian projects",
+  "name": "Organizational Standards",
+  "description": "Standard fonts, networking tools, and debugging utilities for organizational projects",
   "options": {
     "installFonts": {
       "type": "boolean",
@@ -207,26 +210,27 @@ features/<feature-name>/
     }
   },
   "containerEnv": {
-    "CODEMIAN_STANDARDS_VERSION": "1.0.0"
+    "ORG_STANDARDS_VERSION": "1.0.0"
   }
 }
 ```
 
 **install.sh Implementation Details**:
 
-1. **User Management**:
+1. **User Management Pattern**:
    ```bash
    # Handle existing vscode user/group conflicts
    if id -u vscode >/dev/null 2>&1; then
        userdel -r vscode 2>/dev/null || true
    fi
    
-   # Create joe user with correct UID/GID
-   if ! id -u joe >/dev/null 2>&1; then
-       groupadd -g 1000 joe
-       useradd -u 1000 -g 1000 -m -s /bin/bash joe
-       usermod -aG sudo joe
-       echo "joe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/joe
+   # Create custom user with correct UID/GID (customize username as needed)
+   CONTAINER_USER="youruser"  # Change this to your preferred username
+   if ! id -u $CONTAINER_USER >/dev/null 2>&1; then
+       groupadd -g 1000 $CONTAINER_USER
+       useradd -u 1000 -g 1000 -m -s /bin/bash $CONTAINER_USER
+       usermod -aG sudo $CONTAINER_USER
+       echo "$CONTAINER_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$CONTAINER_USER
    fi
    ```
 
@@ -302,17 +306,19 @@ features/<feature-name>/
 
 **install.sh Implementation Details**:
 
-1. **SSH Directory Setup**:
+1. **SSH Directory Setup Pattern**:
    ```bash
-   # Create SSH directory structure for joe user
-   mkdir -p /home/joe/.ssh
-   chown joe:joe /home/joe/.ssh
-   chmod 700 /home/joe/.ssh
+   # Create SSH directory structure for container user
+   # (CONTAINER_USER detected using pattern above)
+   USER_HOME="/home/$CONTAINER_USER"
+   mkdir -p "$USER_HOME/.ssh"
+   chown "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.ssh"
+   chmod 700 "$USER_HOME/.ssh"
    ```
 
-2. **SSH Configuration**:
+2. **SSH Configuration Pattern**:
    ```bash
-   cat > /home/joe/.ssh/config << 'EOF'
+   cat > "$USER_HOME/.ssh/config" << 'EOF'
    Host github.com
        HostName github.com
        User git
@@ -424,14 +430,18 @@ features/<feature-name>/
 
 **install.sh Implementation Details**:
 
-1. **User Detection Pattern**:
+1. **User Detection Pattern** (use in all features):
    ```bash
+   # Detect container user (customize list for your setup)
    CONTAINER_USER=""
-   if id -u joe >/dev/null 2>&1; then
-       CONTAINER_USER="joe"
-   elif id -u vscode >/dev/null 2>&1; then
-       CONTAINER_USER="vscode"
-   else
+   for user in youruser joe vscode; do
+       if id -u $user >/dev/null 2>&1; then
+           CONTAINER_USER="$user"
+           break
+       fi
+   done
+   
+   if [ -z "$CONTAINER_USER" ]; then
        echo "❌ No suitable user found"
        exit 1
    fi
@@ -464,23 +474,24 @@ features/<feature-name>/
 
 ## Script System Analysis
 
-### Main Environment Setup
+### Main Environment Setup Script
 
 #### setup-environment.sh
 
 **Purpose**: Main post-create initialization script run by `postCreateCommand`
 
-**Implementation**:
+**Implementation Pattern**:
 ```bash
 #!/usr/bin/env bash
 set -e
 
 echo "🚀 Setting up development environment..."
 
-# 1. Setup dotfiles
+# 1. Setup dotfiles (customize repository URL)
 echo "🏠 Setting up dotfiles..."
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/yourorg/dotfiles.git}"
 if [ ! -d ~/dotfiles ]; then
-    git clone https://github.com/JayDeeAU/dotfiles.git ~/dotfiles
+    git clone $DOTFILES_REPO ~/dotfiles
     cd ~/dotfiles
     chmod +x ./dotbootstrap.sh
     ./dotbootstrap.sh || echo "⚠️ Dotfiles setup failed, continuing..."
@@ -911,7 +922,9 @@ git worktree remove ../project-staging --force
 
 ---
 
-## Maintenance and Extension Guide
+## Feature Development Guide
+
+> **For maintainers adding new features to the devcontainer system**
 
 ### Adding a New Feature
 
@@ -994,6 +1007,8 @@ Add to `.devcontainer/devcontainer.json`:
 
 ### Modifying Existing Features
 
+> **Guidelines for safe modifications to existing feature implementations**
+
 #### Pattern for Safe Modifications
 
 1. **Test in isolation** by creating a test devcontainer.json
@@ -1002,9 +1017,9 @@ Add to `.devcontainer/devcontainer.json`:
 4. **Handle optional dependencies** gracefully
 5. **Provide meaningful error messages**
 
-#### Example: Adding a Tool to Codemian Standards
+#### Example: Adding a Tool to Organizational Standards
 
-Edit `features/codemian-standards/install.sh`:
+Edit `features/organizational-standards/install.sh`:
 ```bash
 # Add to the development tools section
 if [ "${INSTALLDEVTOOLS}" = "true" ]; then
@@ -1017,9 +1032,13 @@ if [ "${INSTALLDEVTOOLS}" = "true" ]; then
 fi
 ```
 
-### Best Practices
+---
 
-#### Feature Development Guidelines
+## Maintenance Procedures
+
+> **For system administrators maintaining the devcontainer infrastructure**
+
+### Best Practices for Feature Development
 
 1. **Idempotent Operations**: Features should be safe to run multiple times
 2. **User Detection**: Always handle both joe and vscode users
@@ -1051,39 +1070,56 @@ fi
 
 ---
 
-## Implementation Status
+## Implementation Status & Known Issues
 
-### ✅ Completed Features
+### ✅ Production-Ready Components
 
-1. **Codemian Standards** - Organizational tools and utilities
-2. **Host SSH Access** - SSH key mounting and git provider testing
-3. **Extension Manager** - VS Code extension synchronization
-4. **Claude Code** - AI development assistance with aliases
+All features and scripts are production-ready and actively used across multiple projects:
 
-### 🚧 Planned Features (Not Implemented)
+1. **Organizational Standards** - Development tools and utilities (customize for your needs)
+2. **Host SSH Access** - SSH key mounting and git provider authentication
+3. **Extension Manager** - VS Code extension synchronization and backup
+4. **Claude Code** - AI development assistance with persistent credentials
+5. **Universal Container Manager** - Multi-environment Docker orchestration
+6. **Version Manager** - Sequential semantic versioning for parallel development
+7. **Project Detection** - Automatic setup for Poetry and pnpm projects
 
-1. **Git Workflows** - Advanced git automation (referenced but not implemented)
+### 🔧 Customization Points
 
-The repository contains planning documents for git-workflows feature:
-- Reference to dotfiles git automation functions
-- Planned implementation structure
-- Integration points identified
+When deploying to a new organization:
 
-### 🔧 Maintenance Items
+1. **Feature Names**: Rename `organizational-standards` to match your org
+2. **User Configuration**: Update default username pattern in features
+3. **Dotfiles Repository**: Update `DOTFILES_REPO` URL in setup-environment.sh
+4. **Templates**: Customize `.devcontainer/templates/` for common project types
+5. **Port Ranges**: Adjust port assignments in universal-container-manager.sh if needed
 
-1. **Extension Manager** could be enhanced with automatic watching
-2. **Project Detection** could support additional framework types
-3. **Tool Manager** system exists in scripts but not integrated into features
-4. **Legacy Migration** complete - old files archived in `legacy/` directory
+### 📚 Legacy Documentation
 
-### 🎯 Current Focus
+The repository contains archived planning documents in `legacy/` directory:
+- Old Dockerfile migration notes
+- Feature planning documents
+- Pre-refactor documentation
 
-The environment is **production-ready** for:
-- Python development with Poetry
-- Node.js development with pnpm  
-- Full-stack projects
-- Container-based development
-- Git workflows with SSH authentication
-- AI-assisted development with Claude Code
+These are kept for historical reference but are not part of the current implementation.
 
-The modular architecture makes it easy to add new features while maintaining the existing stable functionality.
+---
+
+## Support & Contribution
+
+### Getting Help
+
+- **User Questions**: See [INDEX.md](INDEX.md) for documentation navigation
+- **Technical Issues**: Check this README and feature implementation details
+- **Feature Requests**: Propose new features following the patterns in this guide
+
+### Contributing
+
+When contributing new features:
+1. Follow the feature structure pattern
+2. Use the user detection pattern
+3. Make it project-agnostic
+4. Document in feature README.md
+5. Update this technical guide
+
+---

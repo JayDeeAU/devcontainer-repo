@@ -1,4 +1,9 @@
-# 🎭 Complete Development Scenario Guide with Navigation Index
+# 🎭 Complete Development Workflow Guide
+
+> **📌 Universal Guide**: These workflow scenarios work identically for any project using the devcontainer system.  
+> Project-specific settings (ports, services, branches) are configured via `.container-config.json` (see [PROJECT-SETUP.md](PROJECT-SETUP.md)).
+
+---
 
 ## 📚 **Quick Navigation Index**
 

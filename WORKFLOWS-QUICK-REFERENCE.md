@@ -1,4 +1,9 @@
-# 🎭 Development Scenarios Cheat Sheet
+# 🎭 Development Workflows - Quick Reference
+
+> **📌 Universal Guide**: This workflow guide works identically for any project using the devcontainer system.  
+> Project-specific configuration is handled via `.container-config.json` (see [PROJECT-SETUP.md](PROJECT-SETUP.md)).
+
+---
 
 ## 📚 **Quick Scenario Navigation**
 
