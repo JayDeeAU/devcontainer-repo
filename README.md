@@ -770,6 +770,147 @@ If you're experiencing stale image issues, check:
 
 ---
 
+### Debug Worktree Management
+
+The Universal Container Manager uses **Git worktrees** for isolated debugging of production and staging environments. This ensures your debug sessions don't affect your main workspace and allows you to preserve temporary debugging code between sessions.
+
+#### How Worktrees Work
+
+**Debug Modes That Use Worktrees:**
+- `env-prod --debug`: Creates worktree at `../project-production` (main branch)
+- `env-staging --debug`: Creates worktree at `../project-staging` (develop branch)
+
+**Debug Mode Without Worktree:**
+- `env-local`: Uses current directory (stays on your current branch)
+- `env-local` with debugger: Same as above, just enables debugger wait
+
+**Regular Modes (No Source Mounting):**
+- `env-prod`: Uses built images only, no source mount
+- `env-staging`: Uses built images only, no source mount
+
+#### Worktree Lifecycle
+
+**First Debug Session:**
+```bash
+# Creates worktree and syncs from origin
+env-staging --debug
+
+# Worktree created at: ../project-staging
+# Branch: develop (synced from origin)
+# Port: 7611
+```
+
+**Subsequent Debug Sessions:**
+```bash
+# Uses existing worktree, preserves your changes
+env-staging --debug
+
+# Your debug prints and temporary code are still there!
+# No automatic sync - your scratch pad is preserved
+```
+
+**Updating Worktree:**
+```bash
+# Pull latest changes from origin when needed
+env-staging --debug --sync
+
+# This will:
+# 1. Switch to develop branch (if detached)
+# 2. Pull latest from origin/develop
+# 3. You'll lose any temporary debug code
+```
+
+#### Key Behaviors
+
+**Worktrees Are Scratch Pads:**
+- ✅ Add debug prints, temporary logging, test code
+- ✅ Changes stay between sessions (until you --sync)
+- ❌ Don't commit important work here
+- ❌ Changes never sync back to origin
+
+**Branch Conflicts Handled:**
+If your main workspace is on the same branch as a debug environment:
+```bash
+# Main workspace on develop
+cd ~/my-project
+
+# This works! Creates detached HEAD worktree
+env-staging --debug
+
+# Worktree created in detached state to avoid conflicts
+# You can still debug normally
+```
+
+**Source Mounting Matrix:**
+```
+Environment         Source Mount?    Worktree Location        Branch
+-----------         -------------    -----------------        ------
+prod                No               N/A                      (uses image)
+prod --debug        Yes              ../project-production    main
+staging             No               N/A                      (uses image)  
+staging --debug     Yes              ../project-staging       develop
+local               Yes              Current directory        (your branch)
+local (debugger)    Yes              Current directory        (your branch)
+```
+
+#### Manual Worktree Setup
+
+If you want to pre-create both worktrees:
+```bash
+# Creates both prod and staging worktrees with latest sync
+universal-container-manager setup-worktrees
+
+# This is optional - worktrees auto-create on first --debug use
+```
+
+#### Troubleshooting
+
+**Issue: "Branch already used by worktree"**
+```bash
+# This is automatically handled!
+# If branch is checked out in main workspace,
+# worktree uses detached HEAD instead
+```
+
+**Issue: Worktree stuck in detached HEAD**
+```bash
+# Use --sync to recover
+env-staging --debug --sync
+
+# This will:
+# 1. Checkout develop branch
+# 2. Pull latest changes
+```
+
+**Issue: Want to clean up worktree**
+```bash
+# Remove worktree manually
+git worktree remove ../project-staging --force
+
+# Next debug session will recreate it fresh
+```
+
+#### Best Practices
+
+1. **Use worktrees for read-only debugging**
+   - Look at production/staging code
+   - Add temporary prints/logs
+   - Test quick fixes before implementing properly
+
+2. **Use --sync when starting fresh investigation**
+   - Pull latest code before debugging new issue
+   - Reset worktree to clean state
+
+3. **Don't use --sync mid-debugging**
+   - Preserves your temporary debug code
+   - Allows multi-session investigations
+
+4. **Regular env-staging doesn't affect your work**
+   - Only debug modes mount source
+   - Safe to restart staging environment anytime
+
+---
+
 ## Maintenance and Extension Guide
 
 ### Adding a New Feature

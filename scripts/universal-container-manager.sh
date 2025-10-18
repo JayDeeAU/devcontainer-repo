@@ -432,19 +432,23 @@ get_source_directory_for_env() {
     if [[ "$debug_mode" == "true" || "$env" == "local" ]]; then
         # Use worktree directory if enabled and available
         if [[ "$WORKTREE_SUPPORT" == "true" && "$debug_mode" == "true" ]]; then
+            local worktree_path=""
             case "$env" in
                 prod)
-                    echo "$PROD_WORKTREE_DIR"
+                    worktree_path="$PROD_WORKTREE_DIR"
                     ;;
                 staging)
-                    echo "$STAGING_WORKTREE_DIR"
+                    worktree_path="$STAGING_WORKTREE_DIR"
                     ;;
                 *)
-                    echo "."
+                    echo "$(pwd)"
+                    return
                     ;;
             esac
+            # Convert to absolute path for Docker Compose
+            echo "$(cd "$(dirname "$worktree_path")" 2>/dev/null && pwd)/$(basename "$worktree_path")"
         else
-            echo "."
+            echo "$(pwd)"
         fi
     else
         echo "none"
