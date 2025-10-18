@@ -432,23 +432,19 @@ get_source_directory_for_env() {
     if [[ "$debug_mode" == "true" || "$env" == "local" ]]; then
         # Use worktree directory if enabled and available
         if [[ "$WORKTREE_SUPPORT" == "true" && "$debug_mode" == "true" ]]; then
-            local worktree_path=""
             case "$env" in
                 prod)
-                    worktree_path="$PROD_WORKTREE_DIR"
+                    echo "$PROD_WORKTREE_DIR"
                     ;;
                 staging)
-                    worktree_path="$STAGING_WORKTREE_DIR"
+                    echo "$STAGING_WORKTREE_DIR"
                     ;;
                 *)
-                    echo "$(pwd)"
-                    return
+                    echo "."
                     ;;
             esac
-            # Convert to absolute path for Docker Compose
-            echo "$(cd "$(dirname "$worktree_path")" 2>/dev/null && pwd)/$(basename "$worktree_path")"
         else
-            echo "$(pwd)"
+            echo "."
         fi
     else
         echo "none"
@@ -517,6 +513,15 @@ create_worktree() {
         return 1
     fi
     
+    # Remove .devcontainer from worktree (scratch pad doesn't need it)
+    rm -rf "$worktree_dir/.devcontainer" 2>/dev/null
+    
+    # Add worktree to .gitignore if not already there
+    local worktree_name=$(basename "$worktree_dir")
+    if ! grep -q "^${worktree_name}/$" ".gitignore" 2>/dev/null; then
+        echo "${worktree_name}/" >> ".gitignore"
+    fi
+    
     success "Worktree created in detached state: $worktree_dir (tracking $target_branch)"
     return 0
 }
@@ -545,6 +550,10 @@ sync_worktree() {
     fi
     
     popd >/dev/null
+    
+    # Remove .devcontainer from worktree after sync
+    rm -rf "$worktree_dir/.devcontainer" 2>/dev/null
+    
     success "Worktree synced to origin/$target_branch (detached)"
     return 0
 }
