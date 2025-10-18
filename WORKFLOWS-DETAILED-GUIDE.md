@@ -8,25 +8,25 @@
 ## 📚 **Quick Navigation Index**
 
 ### **Core Development Scenarios**
-- [🌟 Scenario 1: Feature Development](#scenario-1-feature-development)
-- [🚨 Scenario 2: Production Hotfix](#scenario-2-production-hotfix)  
-- [🚀 Scenario 3: Release Preparation](#scenario-3-release-preparation)
-- [⚡ Scenario 4: Team Feature Integration](#scenario-4-team-feature-integration)
-- [🔄 Scenario 5: Hotfix Distribution](#scenario-5-hotfix-distribution)
+- [🌟 Scenario 1: Feature Development](#🌟-scenario-1-feature-development)
+- [🚨 Scenario 2: Production Hotfix](#🚨-scenario-2-production-hotfix)  
+- [🚀 Scenario 3: Release Preparation](#🚀-scenario-3-release-preparation)
+- [⚡ Scenario 4: Team Feature Integration](#⚡-scenario-4-team-feature-integration)
+- [🔄 Scenario 5: Hotfix Distribution](#🔄-scenario-5-hotfix-distribution)
 
 ### **Testing & Environment Scenarios**
-- [🧪 Scenario 6: Multi-Environment Testing](#scenario-6-multi-environment-testing)
-- [🔍 Scenario 7: Production Investigation (Debug Mode)](#scenario-7-production-investigation-debug-mode)
-- [📊 Scenario 8: Container Management](#scenario-8-container-management)
+- [🧪 Scenario 6: Multi-Environment Testing](#🧪-scenario-6-multi-environment-testing)
+- [🔍 Scenario 7: Production Investigation (Debug Mode)](#🔍-scenario-7-production-investigation-debug-mode)
+- [📊 Scenario 8: Container Management](#📊-scenario-8-container-management)
 
 ### **Cleanup & Abandonment Scenarios**
-- [🗑️ Scenario 9: Feature Abandonment](#scenario-9-feature-abandonment)
-- [⚠️ Scenario 10: Hotfix Abandonment](#scenario-10-hotfix-abandonment)
-- [🔄 Scenario 11: Emergency Scenario Switching](#scenario-11-emergency-scenario-switching)
+- [🗑️ Scenario 9: Feature Abandonment](#🗑️-scenario-9-feature-abandonment)
+- [⚠️ Scenario 10: Hotfix Abandonment](#⚠️-scenario-10-hotfix-abandonment)
+- [🔄 Scenario 11: Emergency Scenario Switching](#🔄-scenario-11-emergency-scenario-switching)
 
 ### **GitHub Integration Scenarios**
-- [📋 Scenario 12: Pull Request Workflows](#scenario-12-pull-request-workflows)
-- [🏷️ Scenario 13: Release Management](#scenario-13-release-management)
+- [📋 Scenario 12: Pull Request Workflows](#📋-scenario-12-pull-request-workflows)
+- [🏷️ Scenario 13: Release Management](#🏷️-scenario-13-release-management)
 
 ---
 

@@ -81,7 +81,7 @@ The documentation is intentionally generic because:
 
 ```
 ┌────────────────────────────────────────────────┐
-│  Tier 1: Quick Reference (In Shell)           │
+│  Tier 1: Quick Reference (In Shell)            │
 │  ─────────────────────────────────────────     │
 │  Commands: dot_help_* functions                │
 │  Access:   Type command in shell               │

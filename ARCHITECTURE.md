@@ -125,7 +125,7 @@ $ gffs user-authentication
 
 EXECUTION FLOW:
 ┌─────────────────────────────────────────────┐
-│ 1. Dotfiles (.functions/git.sh)            │
+│ 1. Dotfiles (.functions/git.sh)             │
 │    - Receives command from shell            │
 │    - Validates prerequisites                │
 └─────────────┬───────────────────────────────┘
@@ -139,7 +139,7 @@ EXECUTION FLOW:
 └─────────────┬───────────────────────────────┘
               │
 ┌─────────────▼───────────────────────────────┐
-│ 3. Git Operations (git.sh)                 │
+│ 3. Git Operations (git.sh)                  │
 │    - Creates feature/user-authentication    │
 │    - Switches to new branch                 │
 └─────────────┬───────────────────────────────┘

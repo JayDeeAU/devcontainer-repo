@@ -9,19 +9,19 @@
 
 | Scenario | Key Command | Environment | Duration | When to Use |
 |----------|-------------|-------------|----------|-------------|
-| [🌟 Feature Development](#-feature-development) | `gffs` → `gfff` | Local → Staging | Days-Weeks | Building new functionality |
-| [🚨 Production Hotfix](#-production-hotfix) | `ghfs` → `ghff` | Local → Production | Hours | Critical production issues |
-| [🚀 Release Preparation](#-release-preparation) | `grs` → `grf` | Local → Production | Days | Promoting staging to production |
-| [⚡ Team Integration](#-team-feature-integration) | Manual merges | Staging | Hours | Multiple completed features |
-| [🔄 Hotfix Distribution](#-hotfix-distribution) | `git rebase develop` | Local | Hours | Applying hotfixes to features |
-| [🧪 Multi-Environment Testing](#-multi-environment-testing) | `env-*` commands | All | Hours | Cross-environment validation |
-| [🔍 Production Investigation](#-production-investigation) | `env-prod-debug` | Production Debug | Hours | Source-level debugging |
-| [📊 Container Management](#-container-management) | `env-*` commands | Various | Minutes | Environment maintenance |
-| [🗑️ Feature Abandonment](#-feature-abandonment) | `git revert` / cleanup | Various | Hours | Removing unwanted features |
-| [⚠️ Hotfix Abandonment](#-hotfix-abandonment) | Branch cleanup | Various | Minutes | Canceling hotfix development |
-| [🔄 Emergency Switching](#-emergency-switching) | Multiple commands | Multiple | Minutes | Rapid scenario changes |
-| [📋 Pull Request Workflows](#-pull-request-workflows) | `gh pr` commands | Various | Days | Team collaboration |
-| [🏷️ Release Management](#-release-management) | `grs` → `grf` + `gh` | All | Days-Weeks | Comprehensive releases |
+| [🌟 Feature Development](#🌟-feature-development) | `gffs` → `gfff` | Local → Staging | Days-Weeks | Building new functionality |
+| [🚨 Production Hotfix](#🚨-production-hotfix) | `ghfs` → `ghff` | Local → Production | Hours | Critical production issues |
+| [🚀 Release Preparation](#🚀-release-preparation) | `grs` → `grf` | Local → Production | Days | Promoting staging to production |
+| [⚡ Team Integration](#⚡-team-feature-integration) | Manual merges | Staging | Hours | Multiple completed features |
+| [🔄 Hotfix Distribution](#🔄-hotfix-distribution) | `git rebase develop` | Local | Hours | Applying hotfixes to features |
+| [🧪 Multi-Environment Testing](#🧪-multi-environment-testing) | `env-*` commands | All | Hours | Cross-environment validation |
+| [🔍 Production Investigation](#🔍-production-investigation) | `env-prod-debug` | Production Debug | Hours | Source-level debugging |
+| [📊 Container Management](#📊-container-management) | `env-*` commands | Various | Minutes | Environment maintenance |
+| [🗑️ Feature Abandonment](#🗑️-feature-abandonment) | `git revert` / cleanup | Various | Hours | Removing unwanted features |
+| [⚠️ Hotfix Abandonment](#⚠️-hotfix-abandonment) | Branch cleanup | Various | Minutes | Canceling hotfix development |
+| [🔄 Emergency Switching](#🔄-emergency-switching) | Multiple commands | Multiple | Minutes | Rapid scenario changes |
+| [📋 Pull Request Workflows](#📋-pull-request-workflows) | `gh pr` commands | Various | Days | Team collaboration |
+| [🏷️ Release Management](#🏷️-release-management) | `grs` → `grf` + `gh` | All | Days-Weeks | Comprehensive releases |
 
 ---
 

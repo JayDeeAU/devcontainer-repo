@@ -180,18 +180,18 @@ Dotfiles (Commands) → Container Manager (Docker) → Version Manager (Versions
 ┌────────────────────────────────────────────────────┐
 │  Universal Development Environment                 │
 ├────────────────────────────────────────────────────┤
-│  📖 Documentation:                                 │
+│  📖 Documentation:                                │
 │     Setup:       PROJECT-SETUP.md                  │
 │     Quick Start: QUICK-START.md                    │
 │     Architecture: ARCHITECTURE.md                  │
 │                                                    │
-│  💬 In-Shell Help:                                 │
+│  💬 In-Shell Help:                                │
 │     dot_help_all          # All topics             │
 │     dot_help_workflow     # Daily commands         │
 │     dot_help_architecture # System design          │
 │     dot_help_containers   # Environments           │
 │                                                    │
-│  🛠️  Essential Commands:                           │
+│  🛠️ Essential Commands:                           │
 │     gffs <name>          # Start feature           │
 │     feat "msg"           # Commit                  │
 │     gfff                 # Finish feature          │
@@ -199,7 +199,7 @@ Dotfiles (Commands) → Container Manager (Docker) → Version Manager (Versions
 │     env-staging          # Staging environment     │
 │     env-prod             # Production environment  │
 │                                                    │
-│  ⚙️  Setup:                                         │
+│  ⚙️ Setup:                                        │
 │     config-generator.sh default                    │
 │     universal-container-manager status             │
 └────────────────────────────────────────────────────┘
