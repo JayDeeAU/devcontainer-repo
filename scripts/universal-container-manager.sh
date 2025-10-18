@@ -26,8 +26,23 @@
 #
 # USAGE:
 #   Normal operations: universal-container-manager switch [env]
+#                      universal-container-manager switch [env] --build
 #   Debug operations:  universal-container-manager switch prod --debug
+#                      universal-container-manager switch staging --debug --sync
 #   Utilities:         status, health, logs, stop, setup-worktrees
+#
+# FLAGS:
+#   --build   Force rebuild (required for staging/local with code changes)
+#   --debug   Enable debug mode with source mounting (prod/staging only)
+#   --sync    Update debug worktree from origin (use with --debug)
+#   --push    Auto-push to GHCR after successful build
+#
+# DEBUG WORKTREES:
+#   prod-debug/staging-debug: Isolated worktrees for read-only debugging
+#   - Created on first --debug use, preserved between sessions
+#   - Use --sync flag to update from origin when needed
+#   - Scratch pad area - debug prints won't affect main workspace
+#   local-debug: Uses same source as local (current directory)
 #
 # AUTHOR: Universal Container Management Team
 # VERSION: 2.0.0-universal-aligned
@@ -488,13 +503,17 @@ create_worktree() {
     local worktree_dir="$1"
     local target_branch="$2"
     
-    log "Creating worktree: $worktree_dir ($target_branch)"
+    log "Creating detached worktree: $worktree_dir ($target_branch)"
     
-    if ! git worktree add "$worktree_dir" "$target_branch"; then
+    # Always create worktrees in detached state for debugging
+    # This ensures main workspace can freely switch branches without conflicts
+    # Since worktrees are scratch pads that never merge back, detached state is ideal
+    if ! git worktree add --detach "$worktree_dir" "$target_branch"; then
         error "Failed to create worktree at $worktree_dir"
         return 1
     fi
-    success "Worktree created: $worktree_dir"
+    
+    success "Worktree created in detached state: $worktree_dir (tracking $target_branch)"
     return 0
 }
 
@@ -504,29 +523,32 @@ sync_worktree() {
     
     pushd "$worktree_dir" >/dev/null || return 1
     
-    local current_branch=$(git branch --show-current)
-    if [[ "$current_branch" != "$target_branch" ]]; then
-        error "Worktree $worktree_dir is on wrong branch: $current_branch (expected: $target_branch)"
+    log "Syncing detached worktree with origin/$target_branch..."
+    
+    # Fetch latest from origin
+    if ! git fetch origin "$target_branch"; then
+        error "Failed to fetch $target_branch from origin"
         popd >/dev/null
         return 1
     fi
     
-    log "Syncing $target_branch to latest..."
-    if ! git pull origin "$target_branch"; then
-        error "Failed to pull latest changes for $target_branch"
-        error "Please resolve any conflicts manually in $worktree_dir"
+    # Reset detached HEAD to latest origin commit
+    if ! git reset --hard "origin/$target_branch"; then
+        error "Failed to reset to origin/$target_branch"
+        error "Manual intervention required in $worktree_dir"
         popd >/dev/null
         return 1
     fi
     
     popd >/dev/null
-    success "Worktree synced: $worktree_dir"
+    success "Worktree synced to origin/$target_branch (detached)"
     return 0
 }
 
 ensure_worktree_ready() {
     local env="$1"
     local debug_mode="$2"
+    local sync_worktree_flag="${3:-false}"  # Optional sync flag
     
     # Only manage worktrees if enabled and for debug modes of prod/staging
     if [[ "$WORKTREE_SUPPORT" != "true" || "$debug_mode" != "true" || ("$env" != "prod" && "$env" != "staging") ]]; then
@@ -554,16 +576,24 @@ ensure_worktree_ready() {
             error "Failed to create worktree for $env environment"
             exit 1
         fi
+        # Always sync on first creation
+        sync_worktree_flag="true"
     fi
 
     if [[ -n "$USER" ]]; then
         chown -R "$USER:$USER" "$worktree_dir" 2>/dev/null || true
     fi
     
-    if ! sync_worktree "$worktree_dir" "$target_branch"; then
-        error "Failed to sync $env worktree"
-        error "Debug mode requires up-to-date source code"
-        exit 1
+    # Only sync if explicitly requested via --sync flag
+    if [[ "$sync_worktree_flag" == "true" ]]; then
+        if ! sync_worktree "$worktree_dir" "$target_branch"; then
+            error "Failed to sync $env worktree"
+            error "Debug mode requires up-to-date source code"
+            exit 1
+        fi
+    else
+        log "Using existing worktree (use --sync to update from origin)"
+        log "Worktree: $worktree_dir"
     fi
     
     success "Worktree ready for $env debug mode"
@@ -591,12 +621,12 @@ setup_worktrees() {
     local failed_setups=()
     
     log "Setting up production worktree..."
-    if ! ensure_worktree_ready "prod" "true"; then
+    if ! ensure_worktree_ready "prod" "true" "true"; then
         failed_setups+=("production")
     fi
     
     log "Setting up staging worktree..."
-    if ! ensure_worktree_ready "staging" "true"; then
+    if ! ensure_worktree_ready "staging" "true" "true"; then
         failed_setups+=("staging")
     fi
     
@@ -627,6 +657,7 @@ switch_environment() {
     local should_push="false"
     local force_build="false"
     local auto_push="false"  # NEW: Auto-push without prompt
+    local sync_worktree="false"  # NEW: Sync worktree flag for debug modes
     
     # Parse flags
     shift
@@ -646,6 +677,10 @@ switch_environment() {
                 ;;
             --build|build)
                 force_build="true"
+                shift
+                ;;
+            --sync|sync)
+                sync_worktree="true"
                 shift
                 ;;
             *)
@@ -683,6 +718,12 @@ switch_environment() {
         error "Required Docker Compose files not found for $target_env environment"
         return 1
     fi
+    
+    # Convert space-separated file list to -f flag format
+    local compose_flags=""
+    for file in $compose_files; do
+        compose_flags="$compose_flags -f $file"
+    done
 
     # ============================================================================
     # BUILD STRATEGY - Build only when explicitly requested or necessary
@@ -701,7 +742,7 @@ switch_environment() {
     # Production without --build: Try to pull from GHCR
     elif [[ "$target_env" == "prod" ]]; then
         log "Pulling production images from GHCR..."
-        if docker compose -f $compose_files pull 2>/dev/null; then
+        if docker compose $compose_flags pull 2>/dev/null; then
             needs_build="false"
             success "Using stable images from GHCR"
         else
@@ -713,7 +754,7 @@ switch_environment() {
     # Staging/Local without --build: Try to pull from GHCR, or use local if exists
     elif [[ "$target_env" == "staging" ]]; then
         log "Attempting to pull staging images from GHCR..."
-        if docker compose -f $compose_files pull 2>/dev/null; then
+        if docker compose $compose_flags pull 2>/dev/null; then
             needs_build="false"
             success "Using images from GHCR (use --build to rebuild with local changes)"
         else
@@ -734,8 +775,8 @@ switch_environment() {
         build_reason="Debug mode - building with source mounting for investigation"
     fi
 
-    # Prepare worktrees if needed (line 687 - existing code continues)
-    ensure_worktree_ready "$target_env" "$debug_mode"
+    # Prepare worktrees if needed (pass sync flag)
+    ensure_worktree_ready "$target_env" "$debug_mode" "$sync_worktree"
     
     # ... rest of existing code ...
     
@@ -769,7 +810,7 @@ switch_environment() {
         echo ""
         
         # Build with live output (don't capture - so you see progress)
-        if ! docker compose -f $compose_files build; then
+        if ! docker compose $compose_flags build; then
             error "Failed to build $target_env environment"
             return 1
         fi
@@ -783,7 +824,7 @@ switch_environment() {
     # ============================================================================
     header "Starting $target_env Environment"
     log "Using compose files: $compose_files"
-    if ! docker compose -f $compose_files up -d; then
+    if ! docker compose $compose_flags up -d; then
         error "Failed to start $target_env environment"
         return 1
     fi
@@ -828,7 +869,7 @@ switch_environment() {
                 echo ""
                 
                 # Push with filtered output to reduce noise
-                if docker compose -f $compose_files push 2>&1 | \
+                if docker compose $compose_flags push 2>&1 | \
                    grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
                    grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true; then
                     echo ""
