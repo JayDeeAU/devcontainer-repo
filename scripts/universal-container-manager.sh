@@ -434,10 +434,12 @@ get_source_directory_for_env() {
         if [[ "$WORKTREE_SUPPORT" == "true" && "$debug_mode" == "true" ]]; then
             case "$env" in
                 prod)
-                    echo "$PROD_WORKTREE_DIR"
+                    # Prepend ../ for docker-compose relative path resolution
+                    echo "../$PROD_WORKTREE_DIR"
                     ;;
                 staging)
-                    echo "$STAGING_WORKTREE_DIR"
+                    # Prepend ../ for docker-compose relative path resolution
+                    echo "../$STAGING_WORKTREE_DIR"
                     ;;
                 *)
                     echo "."
