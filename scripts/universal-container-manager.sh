@@ -507,12 +507,23 @@ create_worktree() {
     
     log "Creating detached worktree: $worktree_dir ($target_branch)"
     
+    # Remove existing directory if it exists but isn't a valid worktree
+    if [[ -d "$worktree_dir" ]] && [[ ! -f "$worktree_dir/.git" ]]; then
+        warn "Removing invalid worktree directory: $worktree_dir"
+        rm -rf "$worktree_dir"
+    fi
+    
     # Always create worktrees in detached state for debugging
     # This ensures main workspace can freely switch branches without conflicts
     # Since worktrees are scratch pads that never merge back, detached state is ideal
-    if ! git worktree add --detach "$worktree_dir" "$target_branch"; then
-        error "Failed to create worktree at $worktree_dir"
-        return 1
+    if ! git worktree add --detach "$worktree_dir" "$target_branch" 2>/dev/null; then
+        # If it already exists as a worktree, that's fine - it will be synced if needed
+        if [[ -f "$worktree_dir/.git" ]]; then
+            log "Worktree already exists: $worktree_dir"
+        else
+            error "Failed to create worktree at $worktree_dir"
+            return 1
+        fi
     fi
     
     # Remove .devcontainer from worktree (scratch pad doesn't need it)
@@ -839,7 +850,14 @@ switch_environment() {
     # ============================================================================
     header "Starting $target_env Environment"
     log "Using compose files: $compose_files"
-    if ! docker compose $compose_flags up -d; then
+    
+    # Add --no-build if we didn't explicitly build (prevents double-build)
+    local up_flags=""
+    if [[ "$needs_build" != "true" ]]; then
+        up_flags="--no-build"
+    fi
+    
+    if ! docker compose $compose_flags up -d $up_flags; then
         error "Failed to start $target_env environment"
         return 1
     fi
