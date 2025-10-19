@@ -171,6 +171,11 @@ get_worktree_dirs() {
 
 # ✅ FIXED: Enhanced configuration loading with no config generation
 load_project_config() {
+    # Skip if already loaded
+    if [[ -n "$PROJECT_NAME" && -n "$CONTAINER_PREFIX" ]]; then
+        return 0
+    fi
+    
     if [[ -f "$CONFIG_FILE" ]]; then
         log "Loading configuration from $CONFIG_FILE"
         
@@ -238,13 +243,6 @@ load_project_config() {
         
         return 1
     fi
-    
-    # Make variables readonly after loading
-    readonly PROJECT_NAME
-    readonly CONTAINER_PREFIX
-    readonly PROD_WORKTREE_DIR
-    readonly STAGING_WORKTREE_DIR
-    readonly WORKTREE_SUPPORT
     
     log "Project configuration:"
     log "  Name: $PROJECT_NAME"
@@ -447,17 +445,71 @@ get_source_directory_for_env() {
         if [[ "$WORKTREE_SUPPORT" == "true" && "$debug_mode" == "true" ]]; then
             case "$env" in
                 prod)
-                    # Return absolute path - docker-compose will resolve correctly
-                    echo "$PROD_WORKTREE_DIR"
+                    local wt="$PROD_WORKTREE_DIR"
                     ;;
                 staging)
-                    # Return absolute path - docker-compose will resolve correctly
-                    echo "$STAGING_WORKTREE_DIR"
+                    local wt="$STAGING_WORKTREE_DIR"
                     ;;
                 *)
                     echo "."
+                    return
                     ;;
             esac
+
+            # If worktree path is empty, fallback to current directory
+            if [[ -z "$wt" ]]; then
+                echo "."
+                return
+            fi
+
+            # 🔧 DEVCONTAINER FIX: When running inside devcontainer, Docker daemon needs
+            # the HOST path, not the devcontainer path. Convert container path to host path.
+            if [[ -n "$REMOTE_CONTAINERS" && "$REMOTE_CONTAINERS" == "true" ]]; then
+                # Detect the actual workspace mount point (could be /workspace or /workspaces)
+                local current_workspace="$(pwd)"
+                local workspace_parent="$(dirname "$current_workspace")"
+                local current_repo_name="$(basename "$current_workspace")"
+                
+                # Try common devcontainer naming patterns
+                local container_name=""
+                for pattern in "devcontainer_${current_repo_name}" "vsc-${current_repo_name}" "${current_repo_name}-devcontainer"; do
+                    if docker inspect "$pattern" >/dev/null 2>&1; then
+                        container_name="$pattern"
+                        break
+                    fi
+                done
+                
+                # If still not found, try to find by any devcontainer pattern
+                if [[ -z "$container_name" ]]; then
+                    container_name=$(docker ps --format '{{.Names}}' | grep -i "devcontainer\|vsc-" | head -1)
+                fi
+                
+                if [[ -n "$container_name" ]]; then
+                    # Find the host path by checking which mount corresponds to our current workspace
+                    local host_workspace=$(docker inspect "$container_name" 2>/dev/null | \
+                        jq -r ".[0].Mounts[] | select(.Destination == \"${current_workspace}\") | .Source" 2>/dev/null)
+                    
+                    if [[ -n "$host_workspace" && "$wt" == ${current_workspace}/* ]]; then
+                        # Convert /workspace(s)/PROJECT/worktree to /host/path/PROJECT/worktree
+                        # by replacing the devcontainer workspace prefix with the host path
+                        local relative_path="${wt#${current_workspace}/}"
+                        echo "${host_workspace}/${relative_path}"
+                        return
+                    fi
+                fi
+            fi
+
+            # Non-devcontainer path: prefer relative sibling path for host daemon resolution
+            local repo_root="$(pwd)"
+            local wt_basename="$(basename "$wt")"
+
+            # If wt is a sibling to repo_root, return ../basename
+            if [[ "$wt" == "$repo_root"* || "$wt" == */$(basename "$repo_root")* ]]; then
+                echo "../${wt_basename}"
+            else
+                # Absolute path fallback
+                echo "$wt"
+            fi
         else
             echo "."
         fi
@@ -514,6 +566,60 @@ worktree_exists() {
     [[ -d "$worktree_dir" && -f "$worktree_dir/.git" ]]
 }
 
+setup_worktree_dependencies() {
+    local worktree_dir="$1"
+    
+    log "Setting up dependencies in worktree: $worktree_dir"
+    
+    pushd "$worktree_dir" >/dev/null || return 1
+    
+    # Setup backend dependencies (Poetry)
+    if [[ -d "backend" && -f "backend/pyproject.toml" ]]; then
+        log "Installing Python dependencies in backend..."
+        cd backend
+        if command -v poetry &>/dev/null; then
+            poetry config virtualenvs.in-project true
+            poetry install || warn "Poetry install failed, but continuing..."
+        else
+            warn "Poetry not found, skipping Python dependency setup"
+        fi
+        cd ..
+    fi
+    
+    # Setup frontend dependencies (pnpm)
+    if [[ -d "frontend" && -f "frontend/package.json" ]]; then
+        log "Installing Node dependencies in frontend..."
+        cd frontend
+        if command -v pnpm &>/dev/null; then
+            pnpm install || warn "pnpm install failed, but continuing..."
+        else
+            warn "pnpm not found, skipping Node dependency setup"
+        fi
+        cd ..
+    fi
+    
+    # Setup root-level dependencies if they exist
+    if [[ -f "pyproject.toml" ]]; then
+        log "Installing root Python dependencies..."
+        if command -v poetry &>/dev/null; then
+            poetry config virtualenvs.in-project true
+            poetry install || warn "Poetry install failed, but continuing..."
+        fi
+    fi
+    
+    if [[ -f "package.json" ]]; then
+        log "Installing root Node dependencies..."
+        if command -v pnpm &>/dev/null; then
+            pnpm install || warn "pnpm install failed, but continuing..."
+        fi
+    fi
+    
+    popd >/dev/null
+    
+    success "Worktree dependencies setup completed"
+    return 0
+}
+
 create_worktree() {
     local worktree_dir="$1"
     local target_branch="$2"
@@ -539,8 +645,33 @@ create_worktree() {
         fi
     fi
     
-    # Remove .devcontainer from worktree (scratch pad doesn't need it)
-    rm -rf "$worktree_dir/.devcontainer" 2>/dev/null
+    # Remove git submodule references and directories from worktree (scratch pad doesn't need them)
+    pushd "$worktree_dir" >/dev/null || return 1
+    
+    # Deinitialize .devcontainer submodule if it exists
+    if [[ -d ".devcontainer/.git" ]] || grep -q "path = .devcontainer" .gitmodules 2>/dev/null; then
+        log "Deinitializing .devcontainer submodule in worktree..."
+        git submodule deinit -f .devcontainer 2>/dev/null || true
+        git rm -f .devcontainer 2>/dev/null || true
+        rm -rf .devcontainer 2>/dev/null || true
+    fi
+    
+    # Deinitialize dotfiles submodule if it exists  
+    if [[ -d "dotfiles/.git" ]] || grep -q "path = dotfiles" .gitmodules 2>/dev/null; then
+        log "Deinitializing dotfiles submodule in worktree..."
+        git submodule deinit -f dotfiles 2>/dev/null || true
+        git rm -f dotfiles 2>/dev/null || true
+        rm -rf dotfiles 2>/dev/null || true
+    fi
+    
+    # Clean up .gitmodules if it exists and is now empty
+    if [[ -f ".gitmodules" ]]; then
+        if ! grep -q "\[submodule" .gitmodules 2>/dev/null; then
+            rm -f .gitmodules
+        fi
+    fi
+    
+    popd >/dev/null
     
     # Add worktree to .gitignore if not already there
     local worktree_name=$(basename "$worktree_dir")
@@ -549,6 +680,11 @@ create_worktree() {
     fi
     
     success "Worktree created in detached state: $worktree_dir (tracking $target_branch)"
+    
+    # Note: Worktree dependencies are NOT installed here
+    # Containers use dependencies from their built images (preserved via volume exclusions)
+    # If IDE support is needed, manually run: cd worktree && poetry install && pnpm install
+    
     return 0
 }
 
@@ -577,10 +713,40 @@ sync_worktree() {
     
     popd >/dev/null
     
-    # Remove .devcontainer from worktree after sync
-    rm -rf "$worktree_dir/.devcontainer" 2>/dev/null
+    # Remove git submodule references and directories from worktree after sync
+    pushd "$worktree_dir" >/dev/null || return 1
+    
+    # Deinitialize .devcontainer submodule if it exists
+    if [[ -d ".devcontainer/.git" ]] || grep -q "path = .devcontainer" .gitmodules 2>/dev/null; then
+        log "Deinitializing .devcontainer submodule after sync..."
+        git submodule deinit -f .devcontainer 2>/dev/null || true
+        git rm -f .devcontainer 2>/dev/null || true
+        rm -rf .devcontainer 2>/dev/null || true
+    fi
+    
+    # Deinitialize dotfiles submodule if it exists
+    if [[ -d "dotfiles/.git" ]] || grep -q "path = dotfiles" .gitmodules 2>/dev/null; then
+        log "Deinitializing dotfiles submodule after sync..."
+        git submodule deinit -f dotfiles 2>/dev/null || true
+        git rm -f dotfiles 2>/dev/null || true
+        rm -rf dotfiles 2>/dev/null || true
+    fi
+    
+    # Clean up .gitmodules if it exists and is now empty
+    if [[ -f ".gitmodules" ]]; then
+        if ! grep -q "\[submodule" .gitmodules 2>/dev/null; then
+            rm -f .gitmodules
+        fi
+    fi
+    
+    popd >/dev/null
     
     success "Worktree synced to origin/$target_branch (detached)"
+    
+    # Note: Worktree dependencies are NOT installed after sync
+    # Containers use dependencies from their built images (preserved via volume exclusions)
+    # If IDE support is needed, manually run: cd worktree && poetry install && pnpm install
+    
     return 0
 }
 
@@ -619,9 +785,8 @@ ensure_worktree_ready() {
         sync_worktree_flag="true"
     fi
 
-    if [[ -n "$USER" ]]; then
-        chown -R "$USER:$USER" "$worktree_dir" 2>/dev/null || true
-    fi
+    # Skip chown - worktree permissions are fine, and recursive chown on large trees is slow
+    # If permission issues occur, manually run: sudo chown -R $USER:$USER /path/to/worktree
     
     # Only sync if explicitly requested via --sync flag
     if [[ "$sync_worktree_flag" == "true" ]]; then
@@ -736,26 +901,7 @@ switch_environment() {
     # Export for use in build phase
     export AUTO_PUSH="$auto_push"
     
-    # ✅ SAFEGUARD: Debug modes should only be run from devcontainer for VSCode integration
-    # Check for devcontainer environment variables rather than hardcoded paths
-    if [[ "$debug_mode" == "true" && "$target_env" != "local" ]]; then
-        if [[ "${REMOTE_CONTAINERS:-false}" != "true" && -z "${REMOTE_CONTAINERS_IPC:-}" ]]; then
-            error "Debug modes (--debug) should only be run from within a devcontainer!"
-            echo ""
-            echo "Why? Debug modes create Git worktrees for VSCode debugging."
-            echo "Running from outside the container creates worktrees that VSCode cannot access."
-            echo ""
-            echo "Solution:"
-            echo "  1. Open project in VSCode devcontainer"
-            echo "  2. Run: env-${target_env}-debug"
-            echo ""
-            echo "Alternative: If you need to debug from the host, use local environment:"
-            echo "  env-local --build"
-            echo ""
-            return 1
-        fi
-        log "✓ Running in devcontainer - debug mode will work correctly"
-    fi
+    
     
     # Validate environment
     case "$target_env" in
@@ -884,14 +1030,11 @@ switch_environment() {
     # ============================================================================
     header "Starting $target_env Environment"
     log "Using compose files: $compose_files"
+    log "SOURCE_DIR environment variable: ${SOURCE_DIR:-NOT_SET}"
     
-    # Add --no-build if we didn't explicitly build (prevents double-build)
-    local up_flags=""
-    if [[ "$needs_build" != "true" ]]; then
-        up_flags="--no-build"
-    fi
-    
-    if ! docker compose $compose_flags up -d $up_flags; then
+    # Always use --no-build to prevent docker compose from rebuilding
+    # We handle builds explicitly in the BUILD PHASE above
+    if ! docker compose $compose_flags up -d --no-build; then
         error "Failed to start $target_env environment"
         return 1
     fi
@@ -1222,6 +1365,9 @@ show_help() {
 # ============================================================================
 
 main() {
+    # Load project configuration first (required for all operations)
+    load_project_config || exit 1
+    
     local command="${1:-help}"
     
     case "$command" in
