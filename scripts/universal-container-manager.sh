@@ -671,6 +671,11 @@ create_worktree() {
         fi
     fi
     
+    # Create logs directories with proper permissions for Docker bind mounts
+    log "Creating logs directories with Docker-compatible permissions..."
+    mkdir -p backend/logs frontend/logs 2>/dev/null || true
+    chmod 777 backend/logs frontend/logs 2>/dev/null || true
+    
     popd >/dev/null
     
     # Add worktree to .gitignore if not already there
@@ -738,6 +743,11 @@ sync_worktree() {
             rm -f .gitmodules
         fi
     fi
+    
+    # Create logs directories with proper permissions for Docker bind mounts
+    log "Creating logs directories with Docker-compatible permissions..."
+    mkdir -p backend/logs frontend/logs 2>/dev/null || true
+    chmod 777 backend/logs frontend/logs 2>/dev/null || true
     
     popd >/dev/null
     
