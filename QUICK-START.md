@@ -219,6 +219,9 @@ env-status            # Check status
 **Month 1** - Master these:
 ```bash
 env-prod-debug        # Production debugging
+env-staging-debug     # Staging debugging
+env-prod-sync         # Refresh production worktree (shortcut)
+env-staging-sync      # Refresh staging worktree (shortcut)
 gvb/gvs               # Manual version control
 env-logs              # Log investigation
 ```

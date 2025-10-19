@@ -788,8 +788,10 @@ The Universal Container Manager uses **Git worktrees** for isolated debugging of
 #### How Worktrees Work
 
 **Debug Modes That Use Worktrees:**
-- `env-prod --debug`: Creates worktree at `../project-production` (main branch)
-- `env-staging --debug`: Creates worktree at `../project-staging` (develop branch)
+- `env-prod-debug` (or `env-prod --debug`): Creates worktree at `../project-production` (main branch)
+- `env-prod-sync` (or `env-prod --debug --sync`): Refresh production worktree with latest from origin/main
+- `env-staging-debug` (or `env-staging --debug`): Creates worktree at `../project-staging` (develop branch)
+- `env-staging-sync` (or `env-staging --debug --sync`): Refresh staging worktree with latest from origin/develop
 
 **Debug Mode Without Worktree:**
 - `env-local`: Uses current directory (stays on your current branch)
@@ -823,7 +825,9 @@ env-staging --debug
 **Updating Worktree:**
 ```bash
 # Pull latest changes from origin when needed
-env-staging --debug --sync
+env-staging-sync           # Shortcut alias
+# or
+env-staging --debug --sync # Alternative form
 
 # This will:
 # 1. Switch to develop branch (if detached)

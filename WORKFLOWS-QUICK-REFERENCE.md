@@ -25,7 +25,25 @@
 
 ---
 
-## 🌟 **Feature Development**
+## � **Container Environment Commands**
+
+```bash
+env-prod                     # Production environment (7500 ports)
+env-prod-debug               # Production debug mode (source mounted)
+env-prod-sync                # Refresh production debug worktree (discards changes)
+env-staging                  # Staging environment (7600 ports)
+env-staging-debug            # Staging debug mode (source mounted)
+env-staging-sync             # Refresh staging debug worktree (discards changes)
+env-local                    # Local development (7700 ports)
+env-health                   # Health check all environments
+env-status                   # Show environment status
+env-stop [env]               # Stop specific/all environments
+env-logs [service]           # Show container logs
+```
+
+---
+
+## �🌟 **Feature Development**
 
 ### **Quick Start**
 ```bash
@@ -209,33 +227,39 @@ env-status               # Current environment status
 
 ### **Quick Start**
 ```bash
-env-prod-debug            # Production with source mounting
-# Investigate with source access (read-only)
+env-prod-debug           # Production with worktree source mounting
+# Investigate in ../projectname-production worktree
 env-prod                 # Return to normal production
 ghfs 1.2.4              # Create hotfix with findings
 ```
 
 ### **When to Use**
 - Production bugs need source investigation
-- Performance debugging required
+- Performance debugging with breakpoints
 - Understanding production behavior
 
 ### **⚠️ Important Notes**
-- **Investigation only** - don't make changes in debug mode
-- Use local hotfix branches for actual fixes
-- Temporarily replaces production environment
+- Creates isolated worktree at `../projectname-production`
+- Worktree is **scratch pad** - add debug prints freely
+- Use `--sync` flag to refresh worktree from origin/main
+- Actual fixes go in local hotfix branches, not worktree
 
 ### **Key Commands**
 ```bash
 # Investigation workflow
-env-prod-debug           # Production debug mode (source mounted)
-vim backend/api/file.py  # Investigate source (read-only)
+env-prod-debug           # Production with worktree (creates if needed)
+cd ../projectname-production  # Navigate to worktree
+vim backend/api/file.py  # Add debug prints/investigate
 env-logs backend         # Monitor logs with source context
-env-prod                 # Exit debug mode
+
+# Refresh stale worktree
+env-prod-sync            # Pull latest from origin/main (shortcut)
+env-prod-debug --sync    # Pull latest from origin/main (alternative)
 
 # Implement fix separately
-ghfs 1.2.4              # Create proper hotfix
-vim backend/api/file.py  # Implement fix in local env
+cd /workspaces/projectname  # Return to main workspace
+ghfs 1.2.4              # Create proper hotfix in local env
+vim backend/api/file.py  # Implement fix
 ghff 1.2.4              # Deploy fix to production
 ```
 
@@ -459,8 +483,8 @@ env-prod && env-health   # Monitor production
 | **Production** | 7500-7599 | http://localhost:7500 | ❌ Built images | Live system testing |
 | **Staging** | 7600-7699 | http://localhost:7600 | ❌ Built images | Integration testing |
 | **Local** | 7700-7799 | http://localhost:7700 | ✅ Full source | Development work |
-| **Prod Debug** | 7500-7599 | http://localhost:7500 | ✅ Investigation | Source debugging |
-| **Stage Debug** | 7600-7699 | http://localhost:7600 | ✅ Investigation | Source debugging |
+| **Prod Debug** | 7500-7599 | http://localhost:7500 | ✅ Worktree (`../projectname-production`) | Source debugging |
+| **Stage Debug** | 7600-7699 | http://localhost:7600 | ✅ Worktree (`../projectname-staging`) | Source debugging |
 
 ---
 
@@ -491,10 +515,11 @@ gp origin --delete problem-branch  # Clean remote
 
 ### **Investigation Emergency**
 ```bash
-env-prod-debug          # Source access to production
-# Investigate issue
-env-prod                # Return to normal
-ghfs 1.2.X              # Implement fix properly
+env-prod-debug          # Source access via worktree
+cd ../projectname-production  # Navigate to worktree
+# Investigate issue, add debug prints
+cd /workspaces/projectname && env-prod  # Return to normal
+ghfs 1.2.X              # Implement fix properly in local
 ```
 
 ---

@@ -61,8 +61,10 @@ grf <version>                # git-enhanced-release-finish + environment switch
 ```bash
 env-prod                     # Production environment (7500 ports)
 env-prod-debug               # Production debug mode (source mounted)
+env-prod-sync                # Refresh production debug worktree (discards changes)
 env-staging                  # Staging environment (7600 ports)
 env-staging-debug            # Staging debug mode (source mounted)
+env-staging-sync             # Refresh staging debug worktree (discards changes)
 env-local                    # Local development (7700 ports)
 env-health                   # Health check all environments
 env-status                   # Show environment status

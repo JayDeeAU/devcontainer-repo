@@ -200,6 +200,19 @@ load_project_config() {
             STAGING_WORKTREE_DIR="${STAGING_WORKTREE_DIR:-${auto_dirs[1]}}"
         fi
         
+        # ✅ Convert relative worktree paths to absolute paths (siblings to main repo)
+        # Worktrees are created as siblings: /current/dir/worktree-name
+        local current_dir="$(pwd)"
+        
+        if [[ -n "$PROD_WORKTREE_DIR" && "$PROD_WORKTREE_DIR" != /* ]]; then
+            local worktree_name="$(basename "$PROD_WORKTREE_DIR")"
+            PROD_WORKTREE_DIR="${current_dir}/${worktree_name}"
+        fi
+        if [[ -n "$STAGING_WORKTREE_DIR" && "$STAGING_WORKTREE_DIR" != /* ]]; then
+            local worktree_name="$(basename "$STAGING_WORKTREE_DIR")"
+            STAGING_WORKTREE_DIR="${current_dir}/${worktree_name}"
+        fi
+        
         success "Configuration loaded for project: $PROJECT_NAME"
     else
         # ✅ FIXED: No config generation - provide clear instructions
@@ -434,12 +447,12 @@ get_source_directory_for_env() {
         if [[ "$WORKTREE_SUPPORT" == "true" && "$debug_mode" == "true" ]]; then
             case "$env" in
                 prod)
-                    # Prepend ../ for docker-compose relative path resolution
-                    echo "../$PROD_WORKTREE_DIR"
+                    # Return absolute path - docker-compose will resolve correctly
+                    echo "$PROD_WORKTREE_DIR"
                     ;;
                 staging)
-                    # Prepend ../ for docker-compose relative path resolution
-                    echo "../$STAGING_WORKTREE_DIR"
+                    # Return absolute path - docker-compose will resolve correctly
+                    echo "$STAGING_WORKTREE_DIR"
                     ;;
                 *)
                     echo "."
@@ -722,6 +735,27 @@ switch_environment() {
     
     # Export for use in build phase
     export AUTO_PUSH="$auto_push"
+    
+    # ✅ SAFEGUARD: Debug modes should only be run from devcontainer for VSCode integration
+    # Check for devcontainer environment variables rather than hardcoded paths
+    if [[ "$debug_mode" == "true" && "$target_env" != "local" ]]; then
+        if [[ "${REMOTE_CONTAINERS:-false}" != "true" && -z "${REMOTE_CONTAINERS_IPC:-}" ]]; then
+            error "Debug modes (--debug) should only be run from within a devcontainer!"
+            echo ""
+            echo "Why? Debug modes create Git worktrees for VSCode debugging."
+            echo "Running from outside the container creates worktrees that VSCode cannot access."
+            echo ""
+            echo "Solution:"
+            echo "  1. Open project in VSCode devcontainer"
+            echo "  2. Run: env-${target_env}-debug"
+            echo ""
+            echo "Alternative: If you need to debug from the host, use local environment:"
+            echo "  env-local --build"
+            echo ""
+            return 1
+        fi
+        log "✓ Running in devcontainer - debug mode will work correctly"
+    fi
     
     # Validate environment
     case "$target_env" in
