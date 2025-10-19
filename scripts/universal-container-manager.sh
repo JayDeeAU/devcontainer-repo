@@ -579,7 +579,7 @@ setup_worktree_dependencies() {
         cd backend
         if command -v poetry &>/dev/null; then
             poetry config virtualenvs.in-project true
-            poetry install || warn "Poetry install failed, but continuing..."
+            poetry install --no-root || warn "Poetry install failed, but continuing..."
         else
             warn "Poetry not found, skipping Python dependency setup"
         fi
@@ -603,7 +603,7 @@ setup_worktree_dependencies() {
         log "Installing root Python dependencies..."
         if command -v poetry &>/dev/null; then
             poetry config virtualenvs.in-project true
-            poetry install || warn "Poetry install failed, but continuing..."
+            poetry install --no-root || warn "Poetry install failed, but continuing..."
         fi
     fi
     
@@ -689,6 +689,11 @@ create_worktree() {
     # Note: Worktree dependencies are NOT installed here
     # Containers use dependencies from their built images (preserved via volume exclusions)
     # If IDE support is needed, manually run: cd worktree && poetry install && pnpm install
+
+       #### adding dependencies setup for convenience [removed docker-compose-*debug*.yml preservation] ###
+    if ! setup_worktree_dependencies "$worktree_dir"; then
+        warn "Worktree dependencies setup failed, but continuing..."
+    fi
     
     return 0
 }
@@ -756,6 +761,11 @@ sync_worktree() {
     # Note: Worktree dependencies are NOT installed after sync
     # Containers use dependencies from their built images (preserved via volume exclusions)
     # If IDE support is needed, manually run: cd worktree && poetry install && pnpm install
+
+        #### adding dependencies setup for convenience [removed docker-compose-*debug*.yml preservation] ###
+    if ! setup_worktree_dependencies "$worktree_dir"; then
+        warn "Worktree dependencies setup failed, but continuing..."
+    fi
     
     return 0
 }
