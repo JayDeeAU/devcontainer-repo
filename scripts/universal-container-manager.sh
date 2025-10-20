@@ -435,14 +435,16 @@ get_compose_file_for_env() {
 }
 
 # ✅ FIXED: Universal source directory detection with VSCode support (ITEM 1 INTEGRATION)
+# Returns the source directory path for volume mounting
+# - For debug modes: Returns worktree path (e.g., ../magmabi-production)
+# - For local: Returns current directory (.)
+# - For prod/staging without debug: Returns current directory for logs access
 get_source_directory_for_env() {
-    local env="$1" 
+    local env="$1"
     local debug_mode="$2"
-    
-    # Only mount source in debug mode or local environment
-    if [[ "$debug_mode" == "true" || "$env" == "local" ]]; then
-        # Use worktree directory if enabled and available
-        if [[ "$WORKTREE_SUPPORT" == "true" && "$debug_mode" == "true" ]]; then
+
+    # Use worktree directory for debug modes (prod-debug, staging-debug)
+    if [[ "$debug_mode" == "true" && "$WORKTREE_SUPPORT" == "true" ]]; then
             case "$env" in
                 prod)
                     local wt="$PROD_WORKTREE_DIR"
@@ -510,12 +512,44 @@ get_source_directory_for_env() {
                 # Absolute path fallback
                 echo "$wt"
             fi
-        else
-            echo "."
-        fi
-    else
-        echo "none"
+        return
     fi
+
+    # For all other scenarios (local, prod without debug, staging without debug),
+    # return current directory with devcontainer path translation if needed
+    local current_dir="$(pwd)"
+
+    # 🔧 DEVCONTAINER FIX: Translate to host path when running in devcontainer
+    if [[ -n "$REMOTE_CONTAINERS" && "$REMOTE_CONTAINERS" == "true" ]]; then
+        local current_repo_name="$(basename "$current_dir")"
+
+        # Detect devcontainer name
+        local container_name=""
+        for pattern in "devcontainer_${current_repo_name}" "vsc-${current_repo_name}" "${current_repo_name}-devcontainer"; do
+            if docker inspect "$pattern" >/dev/null 2>&1; then
+                container_name="$pattern"
+                break
+            fi
+        done
+
+        if [[ -z "$container_name" ]]; then
+            container_name=$(docker ps --format '{{.Names}}' | grep -iE "devcontainer.*${current_repo_name}|vsc-${current_repo_name}" | head -1)
+        fi
+
+        if [[ -n "$container_name" ]]; then
+            # Get host path from devcontainer mount
+            local host_path=$(docker inspect "$container_name" 2>/dev/null | \
+                jq -r ".[0].Mounts[] | select(.Destination == \"${current_dir}\") | .Source" 2>/dev/null)
+
+            if [[ -n "$host_path" && "$host_path" != "null" ]]; then
+                echo "$host_path"
+                return
+            fi
+        fi
+    fi
+
+    # Default: return absolute path to current directory (Docker Compose needs absolute paths)
+    echo "$current_dir"
 }
 
 # ============================================================================
@@ -673,8 +707,13 @@ create_worktree() {
     
     # Create logs directories with proper permissions for Docker bind mounts
     log "Creating logs directories with Docker-compatible permissions..."
-    mkdir -p backend/logs frontend/logs 2>/dev/null || true
-    chmod 777 backend/logs frontend/logs 2>/dev/null || true
+    for base in backend frontend; do
+        for env in prod staging local; do
+            dir="${base}/logs/${env}"
+            mkdir -p "$dir" 2>/dev/null || true
+            chmod 777 "$dir" 2>/dev/null || true
+        done
+    done
     
     popd >/dev/null
     
@@ -751,8 +790,13 @@ sync_worktree() {
     
     # Create logs directories with proper permissions for Docker bind mounts
     log "Creating logs directories with Docker-compatible permissions..."
-    mkdir -p backend/logs frontend/logs 2>/dev/null || true
-    chmod 777 backend/logs frontend/logs 2>/dev/null || true
+    for base in backend frontend; do
+        for env in prod staging local; do
+            dir="${base}/logs/${env}"
+            mkdir -p "$dir" 2>/dev/null || true
+            chmod 777 "$dir" 2>/dev/null || true
+        done
+    done
     
     popd >/dev/null
     
@@ -1012,11 +1056,10 @@ switch_environment() {
         docker compose -f "$(get_compose_file_for_env "$target_env" "false")" down --remove-orphans 2>/dev/null || true
     fi   
 
-    # Set source directory for debug/local modes
+    # ✅ ALWAYS set SOURCE_DIR for volume mounts (logs in all modes, full source in debug/local)
     local source_dir=$(get_source_directory_for_env "$target_env" "$debug_mode")
-    if [[ "$source_dir" != "none" ]]; then
-        export SOURCE_DIR="$source_dir"
-    fi
+    export SOURCE_DIR="$source_dir"
+    log "SOURCE_DIR set to: $SOURCE_DIR"
     
     # ============================================================================
     # BUILD PHASE - Docker shows live progress, intelligently uses cache
