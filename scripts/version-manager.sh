@@ -11,11 +11,11 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m'
 
-# Logging functions
-log() { echo -e "${BLUE}ℹ️${NC} $*"; }
-success() { echo -e "${GREEN}✅${NC} $*"; }
-warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
-error() { echo -e "${RED}❌${NC} $*"; }
+# Logging functions (output to stderr to not pollute command output)
+log() { echo -e "${BLUE}ℹ️${NC} $*" >&2; }
+success() { echo -e "${GREEN}✅${NC} $*" >&2; }
+warn() { echo -e "${YELLOW}⚠️${NC} $*" >&2; }
+error() { echo -e "${RED}❌${NC} $*" >&2; }
 
 # Version file locations (Updated for MagmaBI structure)
 readonly BACKEND_PYPROJECT="backend/pyproject.toml"
