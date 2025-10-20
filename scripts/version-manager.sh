@@ -98,10 +98,13 @@ auto_detect_increment() {
 }
 
 # ============================================================================
-# SIMPLE SEQUENTIAL VERSION ASSIGNMENT WITH CONFLICT HANDLING
+# VERSION ASSIGNMENT - CALLED AT FINISH TIME
 # ============================================================================
+# Versions are assigned when features/hotfixes finish (not at start)
+# This eliminates race conditions and merge conflicts
+# Sequential numbering in actual release history (no gaps from abandoned branches)
 
-# Get next sequential version, handling conflicts with a simple retry
+# Get next sequential version (legacy function, kept for compatibility)
 get_next_sequential_version() {
     local increment_type="$1"
     local current_version=$(get_current_version)
@@ -144,52 +147,48 @@ get_next_sequential_version() {
     echo "$next_version"
 }
 
-# Assign version with simple conflict resolution via commit race
-assign_version_with_retry() {
+# Assign version based on target branch's current version
+# Called at finish time to avoid race conditions and merge conflicts
+assign_version() {
     local branch_type="$1"
     local branch_name="$(git branch --show-current)"
-    local max_retries=3
-    local attempt=1
-    
-    while [[ $attempt -le $max_retries ]]; do
-        log "Assigning version for $branch_name (attempt $attempt/$max_retries)..."
-        
-        # Get next version
-        local increment_type=$(auto_detect_increment "$branch_type")
-        local next_version=$(get_next_sequential_version "$increment_type")
-        
-        log "Attempting to assign version: $next_version"
-        
-        # Apply version to files
-        update_all_versions "$next_version"
-        
-        # Commit immediately to establish claim
-        git add -A
-        git commit -m "chore: assign version $next_version for $branch_name
 
-Branch type: $branch_type
-Assigned: $(date -Iseconds)"
-        
-        # Try to push to establish the version claim
-        if git push origin "$branch_name" 2>/dev/null; then
-            success "Version $next_version assigned successfully!"
-            echo "$next_version"
-            return 0
-        else
-            warn "Push failed (attempt $attempt). Another developer may have pushed simultaneously."
-            
-            if [[ $attempt -eq $max_retries ]]; then
-                warn "Max retries reached. Proceeding with version $next_version anyway."
-                warn "Minor conflicts possible but will be resolved during merge."
-                echo "$next_version"
-                return 0
-            fi
-            
-            # Pull latest changes and retry with next version
-            git pull --rebase origin "$branch_name" 2>/dev/null || true
-            ((attempt++))
-        fi
-    done
+    log "Assigning version for $branch_name..."
+
+    # Fetch latest develop/main to get current version
+    git fetch origin 2>/dev/null || true
+
+    # Get next version based on the target branch's current state
+    local increment_type=$(auto_detect_increment "$branch_type")
+
+    # For features/hotfixes finishing into develop/main, check what the target branch version is
+    local base_branch
+    case "$branch_type" in
+        hotfix)
+            base_branch="main"
+            ;;
+        feature)
+            base_branch="develop"
+            ;;
+        *)
+            base_branch="develop"
+            ;;
+    esac
+
+    # Get version from target branch
+    local target_version=$(git show "origin/$base_branch:frontend/package.json" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "0.0.0")
+    log "Current $base_branch version: $target_version"
+
+    # Calculate next version
+    local next_version=$(increment_version "$target_version" "$increment_type")
+    log "Next version will be: $next_version"
+
+    # Apply version to files
+    update_all_versions "$next_version"
+
+    success "Version $next_version assigned!"
+    echo "$next_version"
+    return 0
 }
 
 # ============================================================================
@@ -404,10 +403,10 @@ main() {
             echo "$new_version"
             ;;
             
-        # NEW: Sequential assignment with conflict handling
+        # Assign version at finish time (no race conditions)
         assign)
             local branch_type="$version_or_type"
-            assign_version_with_retry "$branch_type"
+            assign_version "$branch_type"
             ;;
             
         current)
