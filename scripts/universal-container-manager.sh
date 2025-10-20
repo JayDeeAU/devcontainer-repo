@@ -1140,23 +1140,34 @@ switch_environment() {
                 log "Pushing to GitHub Container Registry..."
                 log "(Showing minimal output - this may take a moment)"
                 echo ""
-                
+
                 # Push with filtered output to reduce noise
-                if docker compose $compose_flags push 2>&1 | \
+                # Store push exit code before grep filtering
+                docker compose $compose_flags push 2>&1 | \
                    grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
-                   grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true; then
+                   grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true
+
+                local push_exit_code=${PIPESTATUS[0]}
+
+                if [ $push_exit_code -eq 0 ]; then
                     echo ""
                     success "Images pushed to GHCR successfully!"
                     success "→ Images are now available across all your machines"
                 else
-                    # If grep filtered everything, that's actually success
-                    if [ ${PIPESTATUS[0]} -eq 0 ]; then
-                        echo ""
-                        success "Images pushed to GHCR successfully!"
-                        success "→ Images are now available across all your machines"
-                    else
-                        warn "Push completed with warnings - check output above"
-                    fi
+                    echo ""
+                    error "Failed to push images to GHCR (exit code: $push_exit_code)"
+                    error "Environment is running locally but images NOT in registry"
+                    echo ""
+                    echo "Possible causes:"
+                    echo "  - GHCR authentication token expired"
+                    echo "  - Network connectivity issues"
+                    echo "  - Repository permissions problems"
+                    echo ""
+                    echo "Recovery steps:"
+                    echo "  1. Check GHCR auth: ghcr-status"
+                    echo "  2. Re-authenticate: ghcr-login"
+                    echo "  3. Retry push: universal-container-manager push $target_env"
+                    return 1
                 fi
             else
                 log "Skipping GHCR push - images only available locally"
