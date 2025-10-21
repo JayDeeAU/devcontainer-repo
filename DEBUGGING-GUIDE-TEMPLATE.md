@@ -50,14 +50,14 @@ env-local              # Start local development
 env-staging            # Start staging environment
 env-prod               # Start production environment
 
-# Debug Modes (with source mounting)
-env-local --debug      # Local debug (same as env-local)
-env-staging-debug      # Staging debug (uses worktree) - alias
-env-staging --debug    # Staging debug (flag form)
-env-staging-sync       # Refresh staging worktree - alias
-env-prod-debug         # Production debug (uses worktree) - alias
-env-prod --debug       # Production debug (flag form)
-env-prod-sync          # Refresh production worktree - alias
+# Debug Modes
+env-local-debug        # Local with debuggers in wait state
+
+# Debug Branch Workflow
+git switch main        # Switch to branch you want to debug
+dbs issue-name         # Create debug branch from current branch
+dbl                    # List active debug branches
+dbf                    # End debug session, return to parent branch
 
 # Utilities
 env-status             # Show all environments
@@ -151,51 +151,47 @@ To reduce duplication across environments, use configuration variables:
 
 ---
 
-## Worktree Debugging Strategy
+## Debug Branch Workflow
 
 ### Concept
-Worktrees are **scratch pads** for investigating production/staging issues without affecting your main workspace.
+Debug branches are **temporary scratch branches** for investigating production/staging issues with full source mounting in local environment.
 
-### Setup
-```bash
-# One-time setup
-universal-container-manager setup-worktrees
-```
-
-This creates:
-```
-/workspaces/
-├── your-project/              # Main workspace (feature branches)
-├── your-project-production/   # Detached at origin/main
-└── your-project-staging/      # Detached at origin/develop
-```
+### When to Use
+- Investigating production bugs
+- Testing staging issues locally
+- Reproducing specific version behavior
+- Testing hotfix before creating official hotfix branch
 
 ### Usage Workflow
 ```bash
-# 1. Start debug environment
-env-prod --debug
+# 1. Switch to the branch you want to debug
+git switch main           # For production issues
+git switch develop        # For staging issues
+git switch feature/auth   # For feature branch issues
 
-# 2. Add debug statements in worktree
-cd ../your-project-production
-# Edit files, add console.log/print, etc.
+# 2. Create debug branch from current branch
+dbs payment-timeout
+# Creates: debug/main-payment-timeout-20251021-143022
 
-# 3. Attach VSCode debugger
-# Select: "Production: Full Stack Debug"
+# 3. Environment auto-starts with source mounting
+# Make changes, add debug prints, test fixes
 
-# 4. When done, refresh or delete
-env-prod-sync            # Refresh from origin (shortcut)
-# OR
-env-prod --debug --sync  # Refresh from origin (alternative)
-# OR
-rm -rf ../your-project-production  # Delete and recreate later
+# 4. List active debug branches
+dbl
+
+# 5. When done, end debug session
+dbf
+# Returns to parent branch (main/develop/feature/*)
+# Deletes debug branch
 ```
 
-### Worktree Rules
-- ✅ Safe to add debug prints, logs, breakpoints
-- ✅ Persists until manually deleted
-- ✅ Refresh with `--sync` flag
-- ❌ **Never commit or push from worktree**
-- ❌ Changes won't merge to main codebase
+### Debug Branch Rules
+- ✅ Temporary branches for testing only
+- ✅ Auto-deleted by dbf command
+- ✅ Full source mounting in local environment
+- ✅ Can commit changes if needed (optional)
+- ❌ Not for long-term development
+- ❌ Use feature branches for actual development
 
 ---
 
@@ -336,19 +332,21 @@ services:
    docker network create redis_admin_network  # if used
    ```
 2. Check `.container-config.json` for network requirements
-3. Run: `universal-container-manager setup-worktrees` if using debug modes
 
-### "Worktrees don't exist"
+### "Debug branch won't delete"
 
-**Symptoms:** Debug mode fails with path errors
+**Symptoms:** Cannot delete debug branch
 
 **Solutions:**
 ```bash
-# Create worktrees
-universal-container-manager setup-worktrees
+# If you're on the debug branch, switch first
+git switch main
 
-# Verify they exist
-ls -la /workspaces/
+# Force delete
+git branch -D debug/main-issue-name-timestamp
+
+# Use dbf for clean automated cleanup
+dbf
 ```
 
 ### "Source maps not resolving"
@@ -375,7 +373,7 @@ ls -la /workspaces/
 1. ✅ Always work in **feature branches**, not main/develop
 2. ✅ Use `env-local` for active development
 3. ✅ Test in `env-staging` before merging
-4. ✅ Use `env-prod --debug` only for investigating issues
+4. ✅ Use debug branches only for investigating issues
 
 ### Debugging Workflow
 1. ✅ Start environment before attaching debugger
@@ -383,12 +381,12 @@ ls -la /workspaces/
 3. ✅ Check health endpoints before debugging
 4. ✅ Add breakpoints in VSCode, not `debugger;` statements
 
-### Worktree Workflow
+### Debug Branch Workflow
 1. ✅ Use for **investigation only**, not development
-2. ✅ Add all debug prints you need
-3. ✅ Refresh with `--sync` when stale (>7 days)
-4. ✅ Delete when done: `rm -rf ../your-project-production`
-5. ❌ **Never commit from worktree directories**
+2. ✅ Switch to parent branch first (git switch main/develop)
+3. ✅ Create debug branch (dbs issue-name)
+4. ✅ Clean up when done (dbf)
+5. ❌ **Don't use for long-term feature development**
 
 ---
 

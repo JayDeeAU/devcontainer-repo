@@ -23,16 +23,18 @@ env-local-debug
 
 ### Debug Production/Staging Issues
 ```bash
-# Create debug branch from main (production)
-debug-start issue-name    # or: dbs issue-name
+# Switch to the branch you want to debug
+git switch main              # For production issues
+git switch develop           # For staging issues
+git switch feature/xyz       # For feature branch issues
 
-# Create debug branch from develop (staging)
-debug-start --staging issue-name    # or: dbs --staging issue-name
+# Create debug branch from current branch
+debug-start issue-name    # or: dbs issue-name
 
 # List active debug branches
 debug-list    # or: dbl
 
-# End debug session (returns to original branch, deletes debug branch)
+# End debug session (returns to parent branch, deletes debug branch)
 debug-end     # or: dbf
 ```
 
@@ -131,38 +133,47 @@ Debug branches are temporary branches for testing production or staging issues i
 
 ### Creating Debug Branches
 
-**From main (production issues):**
+**From any branch:**
 ```bash
-debug-start <issue-name>
-# or
+# Switch to the branch you want to debug
+git switch main              # For production issues
+git switch develop           # For staging issues
+git switch feature/auth      # For feature branch issues
+
+# Create debug branch
 dbs <issue-name>
 ```
 
-Example:
+**Examples:**
+
+From main (production):
 ```bash
+git switch main
 dbs payment-timeout
-# Creates: debug/prod-payment-timeout-20251021-143022
+# Creates: debug/main-payment-timeout-20251021-143022
 ```
 
-**From develop (staging issues):**
+From develop (staging):
 ```bash
-debug-start --staging <issue-name>
-# or
-dbs --staging <issue-name>
+git switch develop
+dbs auth-error
+# Creates: debug/develop-auth-error-20251021-143045
 ```
 
-Example:
+From feature branch:
 ```bash
-dbs --staging auth-error
-# Creates: debug/staging-auth-error-20251021-143045
+git switch feature/auth-login
+dbs token-refresh
+# Creates: debug/feature-auth-login-token-refresh-20251021-143100
 ```
 
 **What happens:**
-1. Fetches latest from source branch (main or develop)
-2. Creates timestamped debug branch
-3. Checks out new branch
-4. Automatically starts `env-local` environment
-5. Ready for debugging with full source mounting
+1. Detects current branch as parent
+2. Fetches latest from origin for current branch
+3. Creates timestamped debug branch
+4. Switches to new debug branch
+5. Automatically starts `env-local` environment
+6. Ready for debugging with full source mounting
 
 ### Working in Debug Branches
 
@@ -181,11 +192,11 @@ Once your debug branch is created:
 git add .
 git commit -m "debug: fix payment timeout issue"
 
-# Can checkout to other branches if needed
-git checkout feature/my-feature
+# Can switch to other branches if needed
+git switch feature/my-feature
 
 # Return to debug branch later
-git checkout debug/prod-payment-timeout-20251021-143022
+git switch debug/main-payment-timeout-20251021-143022
 ```
 
 ### Listing Debug Branches
@@ -201,11 +212,17 @@ dbl
 🐛 Active Debug Branches
 ========================
 
-  * debug/prod-payment-timeout-20251021-143022 (from main)  ← current
-    debug/staging-auth-error-20251021-143045 (from develop)
+  → debug/main-payment-timeout-20251021-143022 (current)
+    Parent: main | Issue: payment-timeout
+
+    debug/develop-auth-error-20251021-143045
+    Parent: develop | Issue: auth-error
+
+    debug/feature-auth-login-token-refresh-20251021-143100
+    Parent: feature/auth-login | Issue: token-refresh
 
 💡 Tips:
-   - Switch to a branch: git checkout <branch-name>
+   - Switch to a branch: git switch <branch-name>
    - End debug session: debug-end (or dbf)
    - Delete manually: git branch -D <branch-name>
 ```
@@ -221,34 +238,40 @@ dbf
 
 **What happens:**
 1. Checks for uncommitted changes (prompts if found)
-2. Returns to source branch (main for prod, develop for staging)
-3. Deletes debug branch
+2. Extracts parent branch from debug branch name
+3. Returns to parent branch (main, develop, feature/*, etc.)
+4. Deletes debug branch
 
 **Manual cleanup:**
 If `debug-end` fails or you want manual control:
 ```bash
-# Switch back to base branch
-git checkout main    # or develop
+# Switch back to parent branch
+git switch main              # or develop, or feature/xyz
 
 # Delete debug branch
-git branch -D debug/prod-issue-name-timestamp
+git branch -D debug/main-issue-name-timestamp
 ```
 
 ### Debug Branch Naming Convention
 
 Debug branches follow this pattern:
 ```
-debug/<source>-<issue-name>-<timestamp>
+debug/<parent-branch-sanitized>-<issue-name>-<timestamp>
 
 Examples:
-debug/prod-payment-timeout-20251021-143022
-debug/staging-auth-error-20251021-143045
-debug/release-2.7.0-hotfix-20251021-143100
+debug/main-payment-timeout-20251021-143022
+debug/develop-auth-error-20251021-143045
+debug/feature-auth-login-token-refresh-20251021-143100
+debug/release-2.7.0-hotfix-20251021-143200
 ```
 
 **Components:**
 - `debug/`: Namespace for all debug branches
-- `prod|staging|release-X.X.X`: Source branch indicator
+- `<parent-branch-sanitized>`: Parent branch name with `/` replaced by `-`
+  - `main` → `main`
+  - `develop` → `develop`
+  - `feature/auth-login` → `feature-auth-login`
+  - `release/2.7.0` → `release-2.7.0`
 - `<issue-name>`: Descriptive issue name
 - `<timestamp>`: YYYYmmdd-HHMMSS for uniqueness
 
@@ -397,11 +420,11 @@ env-local
 **Solution:**
 ```bash
 # Force delete
-git branch -D debug/prod-issue-name-timestamp
+git branch -D debug/main-issue-name-timestamp
 
-# If branch is current branch, checkout another first
-git checkout main
-git branch -D debug/prod-issue-name-timestamp
+# If branch is current branch, switch to another first
+git switch main
+git branch -D debug/main-issue-name-timestamp
 ```
 
 ### Build Metadata Not Showing
@@ -455,7 +478,7 @@ dbs payment-timeout      # Creates clean debug branch
 dbf                      # Clean cleanup
 
 # ❌ Bad
-git checkout main        # Direct changes to main
+git switch main          # Direct changes to main
 # Make changes
 ```
 
@@ -483,7 +506,7 @@ dbl
 dbf
 
 # Or manually delete old ones
-git branch -D debug/prod-old-issue-20251001-120000
+git branch -D debug/main-old-issue-20251001-120000
 ```
 
 ### 4. Use env-local-debug Only When Needed
