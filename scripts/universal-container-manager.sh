@@ -490,6 +490,10 @@ build_local_images_with_metadata() {
     local git_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
     local build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+    # Read image names from config (project-agnostic)
+    local backend_dev_image=$(jq -r '.project.images.backend.dev // "backend-dev"' "$CONFIG_FILE")
+    local frontend_dev_image=$(jq -r '.project.images.frontend.dev // "frontend-dev"' "$CONFIG_FILE")
+
     log "Building backend dev image with metadata..."
     docker build \
         --build-arg VERSION="$version" \
@@ -497,7 +501,7 @@ build_local_images_with_metadata() {
         --build-arg GIT_BRANCH="$git_branch" \
         --build-arg BUILD_TIME="$build_time" \
         -f backend/Dockerfile.dev \
-        -t magmabi-backend-dev:latest \
+        -t ${backend_dev_image}:latest \
         . || {
             error "Backend build failed"
             return 1
@@ -510,7 +514,7 @@ build_local_images_with_metadata() {
         --build-arg GIT_BRANCH="$git_branch" \
         --build-arg BUILD_TIME="$build_time" \
         -f frontend/Dockerfile.dev \
-        -t magmabi-frontend-dev:latest \
+        -t ${frontend_dev_image}:latest \
         . || {
             error "Frontend build failed"
             return 1
@@ -768,6 +772,72 @@ switch_environment() {
             .devcontainer/scripts/version-manager.sh store-build "$target_env" 2>/dev/null || true
         fi
 
+        # ============================================================================
+        # PUSH TO GHCR - Immediately after successful build (non-local only)
+        # ============================================================================
+        if [[ "$should_push" == "true" ]]; then
+            echo ""
+            header "Sync to GHCR"
+
+            # Check GHCR authentication first
+            if ! check_ghcr_auth; then
+                warn "Not authenticated to GHCR - images won't be available on other machines"
+                warn "Run: ghcr-login  (or see ghcr-status for details)"
+                log "Images are only available locally on this machine"
+            else
+                # Determine if we should push (prompt or auto)
+                local do_push="n"
+
+                if [[ "${AUTO_PUSH:-false}" == "true" ]]; then
+                    log "Auto-pushing to GHCR (--push flag enabled)..."
+                    do_push="y"
+                else
+                    echo ""
+                    log "Build completed successfully!"
+                    log "Push images to GHCR to make them available on all machines?"
+                    read -p "Push to GHCR? [Y/n] " -n 1 -r do_push
+                    echo ""
+                    do_push=${do_push:-y}  # Default to yes if just Enter pressed
+                fi
+
+                if [[ "$do_push" =~ ^[Yy]$ ]]; then
+                    log "Pushing to GitHub Container Registry..."
+                    log "(Showing minimal output - this may take a moment)"
+                    echo ""
+
+                    # Push with filtered output to reduce noise
+                    # Store push exit code before grep filtering
+                    docker compose $compose_flags push 2>&1 | \
+                       grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
+                       grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true
+
+                    local push_exit_code=${PIPESTATUS[0]}
+
+                    if [ $push_exit_code -eq 0 ]; then
+                        echo ""
+                        success "Images pushed to GHCR successfully!"
+                        success "→ Images are now available across all your machines"
+                    else
+                        echo ""
+                        error "Failed to push images to GHCR (exit code: $push_exit_code)"
+                        error "Continuing with local images..."
+                        echo ""
+                        echo "Possible causes:"
+                        echo "  - GHCR authentication token expired"
+                        echo "  - Network connectivity issues"
+                        echo "  - Repository permissions problems"
+                        echo ""
+                        echo "Recovery steps:"
+                        echo "  1. Check GHCR auth: ghcr-status"
+                        echo "  2. Re-authenticate: ghcr-login"
+                        echo "  3. Retry push: docker compose $compose_flags push"
+                    fi
+                else
+                    log "Skipping GHCR push - images only available locally"
+                fi
+            fi
+        fi
+
     fi
     # ============================================================================
     # START PHASE
@@ -788,74 +858,6 @@ switch_environment() {
     show_environment_info "$target_env" "$base_port"
 
     success "Successfully switched to $target_env environment"
-    
-    # ============================================================================
-    # PUSH TO GHCR - After successful startup (non-local only)
-    # ============================================================================
-    if [[ "$should_push" == "true" && "$needs_build" == "true" ]]; then
-        echo ""
-        header "Sync to GHCR"
-        
-        # Check GHCR authentication first
-        if ! check_ghcr_auth; then
-            warn "Not authenticated to GHCR - images won't be available on other machines"
-            warn "Run: ghcr-login  (or see ghcr-status for details)"
-            log "Images are only available locally on this machine"
-        else
-            # Determine if we should push (prompt or auto)
-            local do_push="n"
-            
-            if [[ "${AUTO_PUSH:-false}" == "true" ]]; then
-                log "Auto-pushing to GHCR (--push flag enabled)..."
-                do_push="y"
-            else
-                echo ""
-                log "Environment is running successfully!"
-                log "Push images to GHCR to make them available on all machines?"
-                read -p "Push to GHCR? [Y/n] " -n 1 -r do_push
-                echo ""
-                do_push=${do_push:-y}  # Default to yes if just Enter pressed
-            fi
-            
-            if [[ "$do_push" =~ ^[Yy]$ ]]; then
-                log "Pushing to GitHub Container Registry..."
-                log "(Showing minimal output - this may take a moment)"
-                echo ""
-
-                # Push with filtered output to reduce noise
-                # Store push exit code before grep filtering
-                docker compose $compose_flags push 2>&1 | \
-                   grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
-                   grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true
-
-                local push_exit_code=${PIPESTATUS[0]}
-
-                if [ $push_exit_code -eq 0 ]; then
-                    echo ""
-                    success "Images pushed to GHCR successfully!"
-                    success "→ Images are now available across all your machines"
-                else
-                    echo ""
-                    error "Failed to push images to GHCR (exit code: $push_exit_code)"
-                    error "Environment is running locally but images NOT in registry"
-                    echo ""
-                    echo "Possible causes:"
-                    echo "  - GHCR authentication token expired"
-                    echo "  - Network connectivity issues"
-                    echo "  - Repository permissions problems"
-                    echo ""
-                    echo "Recovery steps:"
-                    echo "  1. Check GHCR auth: ghcr-status"
-                    echo "  2. Re-authenticate: ghcr-login"
-                    echo "  3. Retry push: universal-container-manager push $target_env"
-                    return 1
-                fi
-            else
-                log "Skipping GHCR push - images only available locally"
-                log "To push later: universal-container-manager push $target_env"
-            fi
-        fi
-    fi
 
     # ============================================================================
     # BRANCH RESTORATION (PROD ENVIRONMENT ONLY)
