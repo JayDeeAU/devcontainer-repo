@@ -449,6 +449,77 @@ check_compose_file() {
 }
 
 # ============================================================================
+# BUILD METADATA & DEPENDENCY TRACKING
+# ============================================================================
+
+# Generate .env.local.buildinfo with current git metadata
+generate_local_buildinfo() {
+    local version=$(jq -r '.version' frontend/package.json 2>/dev/null || echo "dev")
+    local git_commit=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+    local git_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+    local build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    log "Generating .env.local.buildinfo with current git metadata..."
+
+    # Overwrite .env.local.buildinfo
+    cat > .env.local.buildinfo << EOF
+# Auto-generated build metadata - DO NOT EDIT
+# Generated: ${build_time}
+# This file is recreated every time env-local starts
+
+# Frontend build metadata (NEXT_PUBLIC_ for client-side access)
+NEXT_PUBLIC_VERSION=${version}
+NEXT_PUBLIC_GIT_COMMIT=${git_commit}
+NEXT_PUBLIC_GIT_BRANCH=${git_branch}
+NEXT_PUBLIC_BUILD_TIME=${build_time}
+
+# Backend build metadata
+APP_VERSION=${version}
+GIT_COMMIT=${git_commit}
+GIT_BRANCH=${git_branch}
+BUILD_TIME=${build_time}
+EOF
+
+    success "Build metadata generated: v${version} @ ${git_branch} (${git_commit:0:7})"
+}
+
+# Build local dev images with metadata
+build_local_images_with_metadata() {
+    local version=$(jq -r '.version' frontend/package.json 2>/dev/null || echo "dev")
+    local git_commit=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+    local git_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+    local build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    log "Building backend dev image with metadata..."
+    docker build \
+        --build-arg VERSION="$version" \
+        --build-arg GIT_COMMIT="$git_commit" \
+        --build-arg GIT_BRANCH="$git_branch" \
+        --build-arg BUILD_TIME="$build_time" \
+        -f backend/Dockerfile.dev \
+        -t magmabi-backend-dev:latest \
+        . || {
+            error "Backend build failed"
+            return 1
+        }
+
+    log "Building frontend dev image with metadata..."
+    docker build \
+        --build-arg VERSION="$version" \
+        --build-arg GIT_COMMIT="$git_commit" \
+        --build-arg GIT_BRANCH="$git_branch" \
+        --build-arg BUILD_TIME="$build_time" \
+        -f frontend/Dockerfile.dev \
+        -t magmabi-frontend-dev:latest \
+        . || {
+            error "Frontend build failed"
+            return 1
+        }
+
+    success "Dev images built successfully"
+}
+
+# ============================================================================
 # COMMAND FUNCTIONS
 # ============================================================================
 
@@ -500,7 +571,106 @@ switch_environment() {
             return 1
             ;;
     esac
-    
+
+    # ============================================================================
+    # BRANCH TRACKING (PROD ENVIRONMENT ONLY)
+    # ============================================================================
+    # env-prod: Track current branch, switch to main, run operations, return to original branch
+    # env-staging: Run current branch in staging environment (no switching)
+    # env-local: Run current branch (no switching)
+
+    local original_branch=""
+    local needs_branch_restore=false
+
+    if [[ "$target_env" == "prod" ]]; then
+        # Track current branch
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+            original_branch=$(git branch --show-current 2>/dev/null || echo "")
+
+            if [[ -n "$original_branch" && "$original_branch" != "main" ]]; then
+                log "🌿 Tracking current branch: $original_branch"
+                log "🌿 Switching to main branch for production environment..."
+
+                if git checkout main 2>/dev/null; then
+                    needs_branch_restore=true
+                    success "Switched to main branch"
+                else
+                    error "Failed to switch to main branch"
+                    error "Continuing with current branch: $original_branch"
+                fi
+            elif [[ "$original_branch" == "main" ]]; then
+                log "Already on main branch"
+            fi
+        fi
+    fi
+
+    # ============================================================================
+    # DEPENDENCY CHANGE DETECTION
+    # ============================================================================
+    # Check if dependencies changed since last build (warn user)
+    if command -v .devcontainer/scripts/version-manager.sh >/dev/null 2>&1; then
+        if .devcontainer/scripts/version-manager.sh check-deps "$target_env" 2>/dev/null; then
+            warn "Dependencies have changed since last build!"
+            echo ""
+            log "Last build information:"
+            .devcontainer/scripts/version-manager.sh build-info "$target_env" | jq '.' 2>/dev/null || echo "  (no previous build found)"
+            echo ""
+            warn "Consider rebuilding with:"
+            warn "  env-${target_env}-build       (explicit command)"
+            warn "  env-${target_env} --build     (build flag)"
+            echo ""
+
+            # Only prompt if not already building
+            if [[ "$force_build" != "true" ]]; then
+                read -p "Continue without rebuilding? (y/N): " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    log "Exiting. Please rebuild first."
+                    return 1
+                fi
+            fi
+        fi
+    fi
+
+    # ============================================================================
+    # LOCAL ENVIRONMENT - SPECIAL HANDLING
+    # ============================================================================
+    # For local: handle buildinfo generation and optional rebuild
+    if [[ "$target_env" == "local" ]]; then
+        local should_rebuild=false
+
+        # Check if rebuild needed (if not already building)
+        if [[ "$force_build" != "true" ]]; then
+            if command -v .devcontainer/scripts/version-manager.sh >/dev/null 2>&1; then
+                if .devcontainer/scripts/version-manager.sh check-deps "local" 2>/dev/null; then
+                    warn "Dependencies changed - rebuild recommended for local environment"
+                    read -p "Rebuild dev images? (Y/n): " -n 1 -r
+                    echo
+                    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                        should_rebuild=true
+                        force_build="true"  # Set flag for BUILD PHASE
+                    fi
+                fi
+            fi
+        fi
+
+        # Build dev images if needed
+        if [[ "$should_rebuild" == "true" || "$force_build" == "true" ]]; then
+            log "Building local dev images with metadata..."
+            if ! build_local_images_with_metadata; then
+                error "Failed to build local dev images"
+                return 1
+            fi
+            # Store build metadata
+            if command -v .devcontainer/scripts/version-manager.sh >/dev/null 2>&1; then
+                .devcontainer/scripts/version-manager.sh store-build "local" 2>/dev/null || true
+            fi
+        fi
+
+        # Always regenerate buildinfo (branch might have changed)
+        generate_local_buildinfo
+    fi
+
     # Check prerequisites
     if ! check_docker_compose; then
         return 1
@@ -593,6 +763,11 @@ switch_environment() {
         echo ""
         success "Build completed successfully"
 
+        # Store build metadata after successful build
+        if command -v .devcontainer/scripts/version-manager.sh >/dev/null 2>&1; then
+            .devcontainer/scripts/version-manager.sh store-build "$target_env" 2>/dev/null || true
+        fi
+
     fi
     # ============================================================================
     # START PHASE
@@ -681,7 +856,22 @@ switch_environment() {
             fi
         fi
     fi
-    
+
+    # ============================================================================
+    # BRANCH RESTORATION (PROD ENVIRONMENT ONLY)
+    # ============================================================================
+    # Restore original branch if we switched for prod environment
+
+    if [[ "$needs_branch_restore" == "true" && -n "$original_branch" ]]; then
+        log "🌿 Restoring original branch: $original_branch"
+        if git checkout "$original_branch" 2>/dev/null; then
+            success "Restored to original branch: $original_branch"
+        else
+            warn "Failed to restore branch: $original_branch"
+            warn "You may need to manually checkout your original branch"
+        fi
+    fi
+
     return 0
 }
 

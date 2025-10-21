@@ -451,5 +451,108 @@ main() {
     esac
 }
 
+# ============================================================================
+# BUILD HASH TRACKING & METADATA
+# ============================================================================
+
+# Generate hash of dependency files
+generate_dependency_hash() {
+    local env="$1"  # prod, staging, or local
+    local hash_string=""
+
+    # Backend dependencies
+    [[ -f backend/poetry.lock ]] && hash_string+=$(md5sum backend/poetry.lock | awk '{print $1}')
+    [[ -f backend/pyproject.toml ]] && hash_string+=$(md5sum backend/pyproject.toml | awk '{print $1}')
+
+    # Frontend dependencies
+    [[ -f frontend/package.json ]] && hash_string+=$(md5sum frontend/package.json | awk '{print $1}')
+    [[ -f frontend/pnpm-lock.yaml ]] && hash_string+=$(md5sum frontend/pnpm-lock.yaml | awk '{print $1}')
+
+    # Environment files
+    [[ -f .env.production ]] && [[ "$env" == "prod" || "$env" == "staging" ]] && \
+        hash_string+=$(md5sum .env.production | awk '{print $1}')
+    [[ -f .env.local ]] && [[ "$env" == "local" ]] && \
+        hash_string+=$(md5sum .env.local | awk '{print $1}')
+
+    # Generate final hash
+    echo -n "$hash_string" | md5sum | awk '{print $1}'
+}
+
+# Store build metadata
+store_build_metadata() {
+    local env="$1"
+    local branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+    local dep_hash=$(generate_dependency_hash "$env")
+    local version=$(get_current_version)
+    local build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local commit_hash=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+
+    mkdir -p .build-cache
+
+    cat > ".build-cache/${env}-last-build.json" << EOF
+{
+  "environment": "$env",
+  "branch": "$branch",
+  "version": "$version",
+  "commit_hash": "$commit_hash",
+  "dependency_hash": "$dep_hash",
+  "build_time": "$build_time"
+}
+EOF
+
+    log "Build metadata stored for $env environment"
+}
+
+# Check if dependencies changed since last build
+check_dependency_changes() {
+    local env="$1"
+    local cache_file=".build-cache/${env}-last-build.json"
+
+    if [[ ! -f "$cache_file" ]]; then
+        return 0  # First build, dependencies "changed"
+    fi
+
+    local last_hash=$(jq -r '.dependency_hash' "$cache_file" 2>/dev/null || echo "")
+    local current_hash=$(generate_dependency_hash "$env")
+
+    if [[ "$last_hash" != "$current_hash" ]]; then
+        return 0  # Dependencies changed
+    else
+        return 1  # Dependencies unchanged
+    fi
+}
+
+# Get last build info
+get_last_build_info() {
+    local env="$1"
+    local cache_file=".build-cache/${env}-last-build.json"
+
+    if [[ -f "$cache_file" ]]; then
+        cat "$cache_file"
+    else
+        echo "{}"
+    fi
+}
+
+# Check if this is a build metadata command
+case "$1" in
+    store-build)
+        store_build_metadata "$2"
+        exit 0
+        ;;
+    check-deps)
+        check_dependency_changes "$2"
+        exit $?
+        ;;
+    build-info)
+        get_last_build_info "$2"
+        exit 0
+        ;;
+    dep-hash)
+        generate_dependency_hash "$2"
+        exit 0
+        ;;
+esac
+
 # Execute main function
 main "$@"
