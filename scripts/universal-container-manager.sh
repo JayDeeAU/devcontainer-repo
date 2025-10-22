@@ -556,9 +556,21 @@ switch_environment() {
         esac
     done
 
-    # Determine if we should offer to push (non-local environments only)
-    if [[ "$target_env" != "local" ]]; then
+    # Determine push strategy based on environment and flags
+    # prod/staging: auto-push after build (unless --no-push)
+    # local: never auto-push (unless explicit --push)
+    if [[ "$target_env" == "prod" || "$target_env" == "staging" ]]; then
+        # Auto-push for prod/staging after successful build
         should_push="true"
+        # Override with --no-push flag if provided
+        # (should_push already set to false by --no-push flag above)
+    elif [[ "$target_env" == "local" ]]; then
+        # Local: only push if explicitly requested with --push
+        if [[ "$auto_push" == "true" ]]; then
+            should_push="true"
+        else
+            should_push="false"
+        fi
     fi
 
     # Export for use in build phase
@@ -794,55 +806,42 @@ switch_environment() {
                 warn "Run: ghcr-login  (or see ghcr-status for details)"
                 log "Images are only available locally on this machine"
             else
-                # Determine if we should push (prompt or auto)
-                local do_push="n"
-
-                if [[ "${AUTO_PUSH:-false}" == "true" ]]; then
-                    log "Auto-pushing to GHCR (--push flag enabled)..."
-                    do_push="y"
-                else
-                    echo ""
-                    log "Build completed successfully!"
-                    log "Push images to GHCR to make them available on all machines?"
-                    read -p "Push to GHCR? [Y/n] " -n 1 -r do_push
-                    echo ""
-                    do_push=${do_push:-y}  # Default to yes if just Enter pressed
+                # Auto-push for prod/staging, explicit push for local
+                if [[ "$target_env" == "prod" || "$target_env" == "staging" ]]; then
+                    log "Auto-pushing $target_env images to GHCR..."
+                elif [[ "$target_env" == "local" ]]; then
+                    log "Pushing local images to GHCR (--push flag was provided)..."
                 fi
 
-                if [[ "$do_push" =~ ^[Yy]$ ]]; then
-                    log "Pushing to GitHub Container Registry..."
-                    log "(Showing minimal output - this may take a moment)"
+                log "(Showing minimal output - this may take a moment)"
+                echo ""
+
+                # Push with filtered output to reduce noise
+                # Store push exit code before grep filtering
+                docker compose $compose_flags push 2>&1 | \
+                   grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
+                   grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true
+
+                local push_exit_code=${PIPESTATUS[0]}
+
+                if [ $push_exit_code -eq 0 ]; then
                     echo ""
-
-                    # Push with filtered output to reduce noise
-                    # Store push exit code before grep filtering
-                    docker compose $compose_flags push 2>&1 | \
-                       grep -v "Preparing\|Waiting\|Layer already exists\|Pushed" | \
-                       grep -E "^(Pulling|Pushing|.*:.*|Error|denied)" || true
-
-                    local push_exit_code=${PIPESTATUS[0]}
-
-                    if [ $push_exit_code -eq 0 ]; then
-                        echo ""
-                        success "Images pushed to GHCR successfully!"
-                        success "→ Images are now available across all your machines"
-                    else
-                        echo ""
-                        error "Failed to push images to GHCR (exit code: $push_exit_code)"
-                        error "Continuing with local images..."
-                        echo ""
-                        echo "Possible causes:"
-                        echo "  - GHCR authentication token expired"
-                        echo "  - Network connectivity issues"
-                        echo "  - Repository permissions problems"
-                        echo ""
-                        echo "Recovery steps:"
-                        echo "  1. Check GHCR auth: ghcr-status"
-                        echo "  2. Re-authenticate: ghcr-login"
-                        echo "  3. Retry push: docker compose $compose_flags push"
-                    fi
+                    success "Images pushed to GHCR successfully!"
+                    success "→ Images are now available across all your machines"
                 else
-                    log "Skipping GHCR push - images only available locally"
+                    echo ""
+                    error "Failed to push images to GHCR (exit code: $push_exit_code)"
+                    error "Continuing with local images..."
+                    echo ""
+                    echo "Possible causes:"
+                    echo "  - GHCR authentication token expired"
+                    echo "  - Network connectivity issues"
+                    echo "  - Repository permissions problems"
+                    echo ""
+                    echo "Recovery steps:"
+                    echo "  1. Check GHCR auth: ghcr-status"
+                    echo "  2. Re-authenticate: ghcr-login"
+                    echo "  3. Retry push: docker compose $compose_flags push"
                 fi
             fi
         fi
@@ -1097,8 +1096,14 @@ show_help() {
     echo ""
     echo "Flags (can use '--flag' or 'flag' format):"
     echo "    --build, build            Force rebuild with latest changes"
-    echo "    --push, push              Auto-push to GHCR without prompting"
-    echo "    --no-push, no-push        Skip GHCR push entirely (local testing)"
+    echo "    --push, push              Push to GHCR (for local env only)"
+    echo "    --no-push, no-push        Skip GHCR push (for prod/staging)"
+    echo ""
+    echo "Push Behavior:"
+    echo "  prod/staging --build        Auto-pushes to GHCR after successful build"
+    echo "  prod/staging --build --no-push   Build only, skip GHCR push"
+    echo "  local --build               Never pushes (source mounted)"
+    echo "  local --build --push        Explicitly push local build to GHCR"
     echo ""
     echo "Other Commands:"
     echo "  status                      Show current environment status"
@@ -1111,11 +1116,10 @@ show_help() {
     echo ""
     echo "Common Workflows:"
     echo "  Active development:         env-local"
-    echo "  Test before prod:           env-staging"
-    echo "  Deploy to production:       env-prod"
-    echo "  Update prod after merge:    env-prod --build  (or: env-prod build)"
-    echo "  Push to GHCR (no prompt):   env-staging --push  (or: env-staging push)"
-    echo "  Test locally only:          env-staging --no-push"
+    echo "  Test before prod:           env-staging --build  (builds + auto-pushes)"
+    echo "  Deploy to production:       env-prod --build     (builds + auto-pushes)"
+    echo "  Local testing only:         env-local --build    (no push)"
+    echo "  Share local build:          env-local --build --push"
     echo ""
     echo "Debugging Strategy:"
     echo "  To debug prod/staging issues:"
