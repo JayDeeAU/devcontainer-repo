@@ -755,6 +755,15 @@ switch_environment() {
         header "Building $target_env Environment"
         log "Reason: $build_reason"
 
+        # Generate and export build metadata for docker compose
+        # Docker will automatically pass these to Dockerfile ARG declarations
+        export VERSION=$(jq -r '.version' frontend/package.json 2>/dev/null || echo "unknown")
+        export GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+        export GIT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+        export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+        log "Build metadata: v${VERSION} @ ${GIT_BRANCH} (${GIT_COMMIT:0:7}) - ${BUILD_TIME}"
+
         log "Building images (showing live progress)..."
         echo ""
 
