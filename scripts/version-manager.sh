@@ -21,7 +21,7 @@ error() { echo -e "${RED}❌${NC} $*" >&2; }
 readonly BACKEND_PYPROJECT="backend/pyproject.toml"
 readonly FRONTEND_PACKAGE="frontend/package.json"
 readonly BACKEND_CONFIG="backend/api/config.py"
-readonly FRONTEND_VERSION_FILE="frontend/lib/version.ts"
+# readonly FRONTEND_VERSION_FILE="frontend/lib/version.ts"
 
 # Get current version from package.json (source of truth)
 get_current_version() {
@@ -238,52 +238,52 @@ update_backend_config() {
     fi
 }
 
-# Create/update frontend version file for Next.js App Router
-update_frontend_version_file() {
-    local new_version="$1"
+# # Create/update frontend version file for Next.js App Router
+# update_frontend_version_file() {
+#     local new_version="$1"
     
-    # Create lib directory if it doesn't exist
-    mkdir -p "$(dirname "$FRONTEND_VERSION_FILE")"
+#     # Create lib directory if it doesn't exist
+#     mkdir -p "$(dirname "$FRONTEND_VERSION_FILE")"
     
-    log "Creating/updating frontend version file"
+#     log "Creating/updating frontend version file"
     
-    cat > "$FRONTEND_VERSION_FILE" << EOF
-// Auto-generated version file - DO NOT EDIT MANUALLY
-// Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+#     cat > "$FRONTEND_VERSION_FILE" << EOF
+# // Auto-generated version file - DO NOT EDIT MANUALLY
+# // Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-export const VERSION = '$new_version';
+# export const VERSION = '$new_version';
 
-export const BUILD_INFO = {
-  version: '$new_version',
-  buildDate: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")',
-  gitCommit: '$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")',
-  gitBranch: '$(git branch --show-current 2>/dev/null || echo "unknown")',
-  environment: process.env.NODE_ENV || 'development',
-} as const;
+# export const BUILD_INFO = {
+#   version: '$new_version',
+#   buildDate: '$(date -u +"%Y-%m-%dT%H:%M:%SZ")',
+#   gitCommit: '$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")',
+#   gitBranch: '$(git branch --show-current 2>/dev/null || echo "unknown")',
+#   environment: process.env.NODE_ENV || 'development',
+# } as const;
 
-// React hook for accessing version info
-export function useVersion() {
-  return BUILD_INFO;
-}
+# // React hook for accessing version info
+# export function useVersion() {
+#   return BUILD_INFO;
+# }
 
-// API route helper
-export function getVersionInfo() {
-  return BUILD_INFO;
-}
+# // API route helper
+# export function getVersionInfo() {
+#   return BUILD_INFO;
+# }
 
-// Named export instead of anonymous default
-const versionModule = {
-  VERSION,
-  BUILD_INFO,
-  getVersionInfo,
-  useVersion,
-};
+# // Named export instead of anonymous default
+# const versionModule = {
+#   VERSION,
+#   BUILD_INFO,
+#   getVersionInfo,
+#   useVersion,
+# };
 
-export default versionModule;
-EOF
+# export default versionModule;
+# EOF
     
-    success "Updated $FRONTEND_VERSION_FILE"
-}
+#     success "Updated $FRONTEND_VERSION_FILE"
+# }
 
 # Update Docker Compose labels
 update_docker_labels() {
@@ -312,7 +312,7 @@ update_all_versions() {
     update_frontend_version "$new_version"
     update_backend_version "$new_version"
     update_backend_config "$new_version"
-    update_frontend_version_file "$new_version"
+    # update_frontend_version_file "$new_version"
     update_docker_labels "$new_version"
     
     success "All version files updated to $new_version"
