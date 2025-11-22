@@ -102,6 +102,62 @@ error() { echo -e "${RED}${ERROR}${NC}  $*"; }
 header() { echo -e "${PURPLE}${ROCKET}${NC}  ${CYAN}$*${NC}"; }
 protect() { echo -e "${CYAN}${SHIELD}${NC}  $*"; }
 
+# Confirm action with fallback for non-interactive contexts
+# Returns: 0 (success) if confirmed or auto-confirmed, 1 (failure) if declined
+confirm_action() {
+    local prompt="$1"
+    local default="${2:-N}"  # Default to N (decline) if not specified
+    local prompt_suffix
+
+    # Set prompt suffix based on default
+    if [[ "$default" == "Y" ]]; then
+        prompt_suffix="(Y/n)"
+    else
+        prompt_suffix="(y/N)"
+    fi
+
+    # Check for non-interactive bypass environment variable
+    if [[ -n "${CONTAINER_MANAGER_NONINTERACTIVE:-}" ]]; then
+        echo "$prompt $prompt_suffix: "
+        warn "Non-interactive mode enabled (CONTAINER_MANAGER_NONINTERACTIVE=1) - auto-confirming"
+        return 0
+    fi
+
+    # Try to read from /dev/tty with error handling
+    if [ -r /dev/tty ] 2>/dev/null; then
+        read -p "$prompt $prompt_suffix: " -n 1 -r response < /dev/tty 2>/dev/null
+        echo
+        if [[ "$default" == "Y" ]]; then
+            # Default YES: decline only on explicit N/n
+            [[ ! $response =~ ^[Nn]$ ]]
+            return $?
+        else
+            # Default NO: confirm only on explicit Y/y
+            [[ $response =~ ^[Yy]$ ]]
+            return $?
+        fi
+    fi
+
+    # Fallback to stdin if /dev/tty not available but stdin is a terminal
+    if [ -t 0 ]; then
+        read -p "$prompt $prompt_suffix: " -n 1 -r response
+        echo
+        if [[ "$default" == "Y" ]]; then
+            [[ ! $response =~ ^[Nn]$ ]]
+            return $?
+        else
+            [[ $response =~ ^[Yy]$ ]]
+            return $?
+        fi
+    fi
+
+    # Non-interactive context (VSCode GUI, Claude Code, CI/CD, etc.)
+    echo ""
+    warn "Non-interactive environment detected - auto-confirming action"
+    echo "💡  Tip: Set CONTAINER_MANAGER_NONINTERACTIVE=1 to suppress this warning"
+    return 0
+}
+
 # ✅ FIXED: Universal port range assignments (no hardcoding)
 readonly PROD_PORT_BASE=7500
 readonly STAGING_PORT_BASE=7600
@@ -638,9 +694,7 @@ switch_environment() {
 
             # Only prompt if not already building
             if [[ "$force_build" != "true" ]]; then
-                read -p "Continue without rebuilding? (y/N): " -n 1 -r
-                echo
-                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                if ! confirm_action "Continue without rebuilding?" "N"; then
                     log "Exiting. Please rebuild first."
                     return 1
                 fi
@@ -660,9 +714,7 @@ switch_environment() {
             if command -v .devcontainer/scripts/version-manager.sh >/dev/null 2>&1; then
                 if .devcontainer/scripts/version-manager.sh check-deps "local" 2>/dev/null; then
                     warn "Dependencies changed - rebuild recommended for local environment"
-                    read -p "Rebuild dev images? (Y/n): " -n 1 -r
-                    echo
-                    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                    if confirm_action "Rebuild dev images?" "Y"; then
                         should_rebuild=true
                         force_build="true"  # Set flag for BUILD PHASE
                     fi
