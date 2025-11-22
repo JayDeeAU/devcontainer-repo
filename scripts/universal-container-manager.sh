@@ -106,56 +106,30 @@ protect() { echo -e "${CYAN}${SHIELD}${NC}  $*"; }
 # Returns: 0 (success) if confirmed or auto-confirmed, 1 (failure) if declined
 confirm_action() {
     local prompt="$1"
-    local default="${2:-N}"  # Default to N (decline) if not specified
-    local prompt_suffix
+    local default="${2:-N}"
+    local prompt_suffix="(y/N)"
 
-    # Set prompt suffix based on default
     if [[ "$default" == "Y" ]]; then
         prompt_suffix="(Y/n)"
-    else
-        prompt_suffix="(y/N)"
     fi
 
-    # Check for non-interactive bypass environment variable
-    if [[ -n "${CONTAINER_MANAGER_NONINTERACTIVE:-}" ]]; then
-        echo "$prompt $prompt_suffix: "
-        warn "Non-interactive mode enabled (CONTAINER_MANAGER_NONINTERACTIVE=1) - auto-confirming"
+    echo -n "$prompt $prompt_suffix: "
+    if [ -r /dev/tty ]; then
+        read -r response < /dev/tty
+    elif [ -t 0 ]; then
+        read -r response
+    else
+        echo ""
+        echo "⚠️  Non-interactive environment detected - auto-confirming action"
         return 0
     fi
 
-    # Try to read from /dev/tty with error handling
-    if [ -r /dev/tty ] 2>/dev/null; then
-        read -p "$prompt $prompt_suffix: " -n 1 -r response < /dev/tty 2>/dev/null
-        echo
-        if [[ "$default" == "Y" ]]; then
-            # Default YES: decline only on explicit N/n
-            [[ ! $response =~ ^[Nn]$ ]]
-            return $?
-        else
-            # Default NO: confirm only on explicit Y/y
-            [[ $response =~ ^[Yy]$ ]]
-            return $?
-        fi
+    # Handle default
+    if [[ "$default" == "Y" ]]; then
+        [[ ! $response =~ ^[Nn]$ ]]
+    else
+        [[ $response =~ ^[Yy]$ ]]
     fi
-
-    # Fallback to stdin if /dev/tty not available but stdin is a terminal
-    if [ -t 0 ]; then
-        read -p "$prompt $prompt_suffix: " -n 1 -r response
-        echo
-        if [[ "$default" == "Y" ]]; then
-            [[ ! $response =~ ^[Nn]$ ]]
-            return $?
-        else
-            [[ $response =~ ^[Yy]$ ]]
-            return $?
-        fi
-    fi
-
-    # Non-interactive context (VSCode GUI, Claude Code, CI/CD, etc.)
-    echo ""
-    warn "Non-interactive environment detected - auto-confirming action"
-    echo "💡  Tip: Set CONTAINER_MANAGER_NONINTERACTIVE=1 to suppress this warning"
-    return 0
 }
 
 # ✅ FIXED: Universal port range assignments (no hardcoding)
@@ -463,6 +437,67 @@ get_source_directory_for_env() {
 
     # Default: return absolute path to current directory (Docker Compose needs absolute paths)
     echo "$current_dir"
+}
+
+# ============================================================================
+# CACHE INITIALIZATION FUNCTIONS
+# ============================================================================
+
+# Initialize cache directory for environment by copying from backup location if needed
+initialize_cache_for_env() {
+    local env="$1"
+    local source_dir=$(get_source_directory_for_env "$env")
+    local cache_dir="${source_dir}/backend/data_provider_caches/${env}"
+    local backup_cache_dir="/share/DevelopmentProjects/MagmaBI-Full/backend-prod/data_providers/data_provider_caches"
+
+    # Only initialize for staging and production (not local - it has its own cache)
+    if [[ "$env" != "staging" && "$env" != "prod" ]]; then
+        return 0
+    fi
+
+    # Check if cache directory already has data
+    if [[ -d "$cache_dir" ]]; then
+        local file_count=$(find "$cache_dir" -name "*.json" -type f 2>/dev/null | wc -l)
+        if [[ $file_count -gt 0 ]]; then
+            log "Cache directory already exists with $file_count cache files"
+            return 0
+        fi
+    fi
+
+    # Check if backup cache location exists
+    if [[ ! -d "$backup_cache_dir" ]]; then
+        log "No backup cache found at $backup_cache_dir - starting fresh"
+        return 0
+    fi
+
+    # Initialize cache from backup
+    log "Initializing $env cache from backup location..."
+
+    # Ensure cache directory exists
+    mkdir -p "$cache_dir"
+
+    # Copy cache files (only the main cache files, not subdirectories like new_sales_polling)
+    local copied_count=0
+    for cache_file in "$backup_cache_dir"/*.json; do
+        if [[ -f "$cache_file" ]]; then
+            local filename=$(basename "$cache_file")
+            # Skip .old files
+            if [[ "$filename" != *.old ]]; then
+                cp "$cache_file" "$cache_dir/"
+                ((copied_count++))
+            fi
+        fi
+    done
+
+    if [[ $copied_count -gt 0 ]]; then
+        success "Initialized $env cache with $copied_count cache files from backup"
+        log "Cache files copied from: $backup_cache_dir"
+        log "Cache files copied to: $cache_dir"
+    else
+        log "No cache files found in backup location - starting fresh"
+    fi
+
+    return 0
 }
 
 # ============================================================================
@@ -804,13 +839,35 @@ switch_environment() {
     # Stop existing containers for this environment (if any)
     if is_environment_running "$target_env"; then
         log "Stopping existing $target_env containers..."
-        docker compose -f "$(get_compose_file_for_env "$target_env")" down --remove-orphans 2>/dev/null || true
+        local compose_files_to_stop=$(get_compose_file_for_env "$target_env")
+        local compose_flags_to_stop=""
+        for file in $compose_files_to_stop; do
+            compose_flags_to_stop="$compose_flags_to_stop -f $file"
+        done
+
+        # Use --remove-orphans to clean up any containers from previous configurations
+        log "Cleaning up existing containers (including orphans)..."
+        docker compose $compose_flags_to_stop down --remove-orphans 2>/dev/null || true
+
+        # Additional cleanup: remove any orphaned containers matching our prefix and environment
+        # This catches containers that might have been created with a different compose file structure
+        local orphan_containers=$(docker ps -a --format "{{.Names}}" | grep -E "${CONTAINER_PREFIX}.*-${target_env}" || true)
+        if [[ -n "$orphan_containers" ]]; then
+            log "Removing orphaned containers from previous deployments..."
+            echo "$orphan_containers" | while read -r container_name; do
+                docker rm -f "$container_name" 2>/dev/null || true
+            done
+            success "Orphaned containers cleaned up"
+        fi
     fi
 
     # ALWAYS set SOURCE_DIR for volume mounts (logs only for prod/staging, full source for local)
     local source_dir=$(get_source_directory_for_env "$target_env")
     export SOURCE_DIR="$source_dir"
     log "SOURCE_DIR set to: $SOURCE_DIR"
+
+    # Initialize cache from backup if this is the first deployment
+    initialize_cache_for_env "$target_env"
     
     # ============================================================================
     # BUILD PHASE - Docker shows live progress, intelligently uses cache
@@ -905,10 +962,11 @@ switch_environment() {
     header "Starting $target_env Environment"
     log "Using compose files: $compose_files"
     log "SOURCE_DIR environment variable: ${SOURCE_DIR:-NOT_SET}"
-    
+
     # Always use --no-build to prevent docker compose from rebuilding
     # We handle builds explicitly in the BUILD PHASE above
-    if ! docker compose $compose_flags up -d --no-build; then
+    # Include --remove-orphans to ensure any leftover containers are cleaned up
+    if ! docker compose $compose_flags up -d --no-build --remove-orphans; then
         error "Failed to start $target_env environment"
         return 1
     fi
