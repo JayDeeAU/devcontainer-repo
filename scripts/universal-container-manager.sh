@@ -116,11 +116,21 @@ confirm_action() {
 
     echo -n "$prompt $prompt_suffix: "
 
-    # Try stdin first if it's a terminal
-    if [ -t 0 ]; then
+    # Try /dev/tty first (most reliable for interactive terminals)
+    if [ -r /dev/tty ] 2>/dev/null; then
+        if { read -r response < /dev/tty; } 2>/dev/null; then
+            # Successfully read from /dev/tty
+            :
+        fi
+    fi
+
+    # Fallback to stdin if /dev/tty not available but stdin is a terminal
+    if [ -z "$response" ] && [ -t 0 ]; then
         read -r response
+    fi
+
     # In non-interactive contexts (VSCode, Claude Code, CI/CD), auto-confirm
-    else
+    if [ -z "$response" ]; then
         echo ""
         echo "⚠️  Non-interactive environment detected - auto-confirming action"
         return 0
