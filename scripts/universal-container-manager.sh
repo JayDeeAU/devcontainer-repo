@@ -780,6 +780,9 @@ switch_environment() {
             if command -v .devcontainer/scripts/version-manager.sh >/dev/null 2>&1; then
                 .devcontainer/scripts/version-manager.sh store-build "local" 2>/dev/null || true
             fi
+            # Prevent duplicate build in general build phase (line 814-820)
+            # Local build is complete, so skip the redundant docker compose build later
+            force_build="false"
         fi
 
         # Always regenerate buildinfo (branch might have changed)
