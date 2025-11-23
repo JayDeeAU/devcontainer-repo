@@ -108,17 +108,29 @@ confirm_action() {
     local prompt="$1"
     local default="${2:-N}"
     local prompt_suffix="(y/N)"
+    local response
 
     if [[ "$default" == "Y" ]]; then
         prompt_suffix="(Y/n)"
     fi
 
     echo -n "$prompt $prompt_suffix: "
-    if [ -r /dev/tty ]; then
-        read -r response < /dev/tty
-    elif [ -t 0 ]; then
+
+    # Try stdin first (most reliable)
+    if [ -t 0 ]; then
         read -r response
+    # Fall back to /dev/tty (but handle failure gracefully)
+    elif [ -r /dev/tty ]; then
+        if read -r response < /dev/tty 2>/dev/null; then
+            : # Successfully read from /dev/tty
+        else
+            # /dev/tty exists but can't read - auto-confirm
+            echo ""
+            echo "⚠️  Non-interactive environment detected - auto-confirming action"
+            return 0
+        fi
     else
+        # No interactive input available - auto-confirm
         echo ""
         echo "⚠️  Non-interactive environment detected - auto-confirming action"
         return 0
