@@ -151,6 +151,7 @@ get_next_sequential_version() {
 # Called at finish time to avoid race conditions and merge conflicts
 assign_version() {
     local branch_type="$1"
+    local forced_increment="$2"  # Optional: "major", "minor", or "patch"
     local branch_name="$(git branch --show-current)"
 
     log "Assigning version for $branch_name..."
@@ -159,7 +160,14 @@ assign_version() {
     git fetch origin 2>/dev/null || true
 
     # Get next version based on the target branch's current state
-    local increment_type=$(auto_detect_increment "$branch_type")
+    local increment_type
+    if [[ -n "$forced_increment" ]]; then
+        increment_type="$forced_increment"
+        log "Using forced increment type: $increment_type"
+    else
+        increment_type=$(auto_detect_increment "$branch_type")
+        log "Auto-detected increment type: $increment_type"
+    fi
 
     # For features/hotfixes finishing into develop/main, check what the target branch version is
     local base_branch
