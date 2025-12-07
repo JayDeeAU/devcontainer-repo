@@ -82,4 +82,20 @@ if [ "${INSTALLDEVTOOLS}" = "true" ]; then
         zsh
 fi
 
+# Create Python symlinks to match host paths for shared venv compatibility
+# Host uses /usr/bin/pythonX.Y (apt), container has /usr/local/bin (devcontainer image)
+# This allows a single .venv to work in both environments
+echo "Creating Python symlinks for host/container venv compatibility..."
+for py in /usr/local/bin/python3.*; do
+    # Skip config files
+    [[ "$py" == *-config ]] && continue
+    [[ ! -x "$py" ]] && continue
+
+    pyname=$(basename "$py")
+    if [ ! -e "/usr/bin/$pyname" ]; then
+        ln -sf "$py" "/usr/bin/$pyname"
+        echo "  Linked /usr/bin/$pyname -> $py"
+    fi
+done
+
 echo "✅ Codemian Standards installed successfully"
