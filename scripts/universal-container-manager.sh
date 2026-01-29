@@ -47,9 +47,12 @@ set -e
 # CONFIGURATION & CONSTANTS
 # ============================================================================
 
-readonly SCRIPT_VERSION="3.0.0-simplified"
+readonly SCRIPT_VERSION="3.1.0-worktree-support"
 readonly CONFIG_FILE=".container-config.json"
 readonly CONFIG_GENERATOR=".devcontainer/scripts/config-generator.sh"
+
+# Lock file for env-local environment (multi-session isolation)
+readonly ENV_LOCAL_LOCK_FILE="/tmp/magmabi-env-local.lock"
 
 # Color definitions for output formatting (PRESERVED from original)
 readonly RED='\033[0;31m'
@@ -141,6 +144,94 @@ confirm_action() {
         [[ ! $response =~ ^[Nn]$ ]]
     else
         [[ $response =~ ^[Yy]$ ]]
+    fi
+}
+
+# ============================================================================
+# ENV-LOCAL LOCK MANAGEMENT (Multi-Session Isolation)
+# ============================================================================
+# Implements "latest wins" auto-steal with notification
+# Only one session can use env-local containers at a time
+
+# Check and acquire env-local lock (auto-steals if held by another session)
+acquire_env_lock() {
+    local current_path=$(pwd)
+    local current_name=$(basename "$current_path")
+
+    if [[ -f "$ENV_LOCAL_LOCK_FILE" ]]; then
+        local holder=$(jq -r '.holder // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+        local holder_name=$(jq -r '.holder_name // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+        local acquired=$(jq -r '.acquired // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+
+        if [[ -n "$holder" && "$holder" != "$current_path" ]]; then
+            warn "Environment held by: $holder_name (since $acquired)"
+            warn "Auto-stealing environment..."
+
+            # Mark as stolen for previous holder (they can check this)
+            local temp_file=$(mktemp)
+            jq --arg by "$current_path" --arg at "$(date -Iseconds)" \
+               '.stolen_by = $by | .stolen_at = $at' "$ENV_LOCAL_LOCK_FILE" > "$temp_file" 2>/dev/null
+            mv "$temp_file" "$ENV_LOCAL_LOCK_FILE"
+        fi
+    fi
+
+    # Write new lock
+    cat > "$ENV_LOCAL_LOCK_FILE" << EOF
+{
+  "holder": "$current_path",
+  "holder_name": "$current_name",
+  "pid": $$,
+  "acquired": "$(date -Iseconds)",
+  "stolen_by": null,
+  "stolen_at": null
+}
+EOF
+    log "Environment lock acquired for: $current_name"
+}
+
+# Check if we were stolen from (call this to show notification)
+check_stolen_notification() {
+    local current_path=$(pwd)
+
+    if [[ -f "$ENV_LOCAL_LOCK_FILE" ]]; then
+        local stolen_by=$(jq -r '.stolen_by // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+        local holder=$(jq -r '.holder // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+
+        if [[ -n "$stolen_by" && "$holder" != "$current_path" ]]; then
+            local stolen_at=$(jq -r '.stolen_at // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+            warn "Your environment was taken by: $(basename "$stolen_by")"
+            warn "Stolen at: $stolen_at"
+            warn "Running env-local will re-acquire it."
+            return 0  # Was stolen
+        fi
+    fi
+    return 1  # Not stolen
+}
+
+# Release lock explicitly
+release_env_lock() {
+    local current_path=$(pwd)
+
+    if [[ -f "$ENV_LOCAL_LOCK_FILE" ]]; then
+        local holder=$(jq -r '.holder // empty' "$ENV_LOCAL_LOCK_FILE" 2>/dev/null)
+        if [[ "$holder" == "$current_path" ]]; then
+            rm -f "$ENV_LOCAL_LOCK_FILE"
+            success "Environment lock released"
+        else
+            warn "Lock held by another session, nothing to release"
+        fi
+    else
+        log "No lock file found"
+    fi
+}
+
+# Show current lock status
+show_env_lock_status() {
+    if [[ -f "$ENV_LOCAL_LOCK_FILE" ]]; then
+        log "Environment lock status:"
+        cat "$ENV_LOCAL_LOCK_FILE" | jq '.'
+    else
+        log "No environment lock currently held"
     fi
 }
 
@@ -752,8 +843,10 @@ switch_environment() {
     # ============================================================================
     # LOCAL ENVIRONMENT - SPECIAL HANDLING
     # ============================================================================
-    # For local: handle buildinfo generation and optional rebuild
+    # For local: acquire lock, handle buildinfo generation and optional rebuild
     if [[ "$target_env" == "local" ]]; then
+        # Acquire env-local lock (auto-steals from other sessions)
+        acquire_env_lock
         local should_rebuild=false
 
         # Check if rebuild needed (if not already building)
@@ -880,6 +973,21 @@ switch_environment() {
     local source_dir=$(get_source_directory_for_env "$target_env")
     export SOURCE_DIR="$source_dir"
     log "SOURCE_DIR set to: $SOURCE_DIR"
+
+    # Set MAIN_REPO for worktree support (secrets and config from main repo)
+    # This allows worktrees to reference secrets from the main repository
+    local main_repo
+    local git_dir=$(git rev-parse --git-dir 2>/dev/null)
+    if [[ -f "$git_dir" ]]; then
+        # We're in a worktree - parse .git file to find main repo
+        local gitdir_content=$(cat "$git_dir" 2>/dev/null)
+        main_repo=$(echo "$gitdir_content" | sed 's/gitdir: //' | sed 's|/\.git/worktrees/.*||')
+        log "Running from worktree, MAIN_REPO set to: $main_repo"
+    else
+        # We're in the main repo
+        main_repo=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+    fi
+    export MAIN_REPO="$main_repo"
 
     # Initialize cache from backup if this is the first deployment
     initialize_cache_for_env "$target_env"
@@ -1237,6 +1345,8 @@ show_help() {
     echo "  stop [env]                  Stop specific environment or all environments"
     echo "  push [env]                  Manually build and push images to GHCR"
     echo "  pull [env]                  Pull latest images from GHCR"
+    echo "  release-lock                Release env-local lock (for multi-session use)"
+    echo "  lock-status                 Show current env-local lock status"
     echo "  help                        Show this help message"
     echo ""
     echo "Common Workflows:"
@@ -1293,6 +1403,12 @@ main() {
             ;;
         pull)
             pull_from_ghcr "$2"
+            ;;
+        release-lock)
+            release_env_lock
+            ;;
+        lock-status)
+            show_env_lock_status
             ;;
         help|--help|-h)
             show_help

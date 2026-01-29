@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # .devcontainer/scripts/sync-extensions.sh
 # Extension sync script - captures VS Code extension changes
+# Works correctly from both main repo and worktrees
 
 set -e
 
-DEVCONTAINER_JSON="$(pwd)/.devcontainer/devcontainer.json"
+# Get repository root (works in both main repo and worktrees)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
+
+DEVCONTAINER_JSON="$REPO_ROOT/.devcontainer/devcontainer.json"
 BACKUP_DIR="$HOME/.extension-manager/backups"
 LAST_EXTENSIONS_FILE="$HOME/.extension-manager/last-extensions.json"
 

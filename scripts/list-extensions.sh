@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # .devcontainer/scripts/list-extensions.sh
 # List current extensions and their status
+# Works correctly from both main repo and worktrees
 
 echo "📦 Extension Status Report"
 echo "=========================="
 
-DEVCONTAINER_JSON="$(pwd)/.devcontainer/devcontainer.json"
+# Get repository root (works in both main repo and worktrees)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
+
+DEVCONTAINER_JSON="$REPO_ROOT/.devcontainer/devcontainer.json"
 
 echo "🔧 Currently Installed:"
 code --list-extensions 2>/dev/null | sort | sed 's/^/  ✓ /'

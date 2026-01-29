@@ -1,6 +1,7 @@
 #!/bin/bash
 # scripts/version-manager.sh - Sequential versioning with simple conflict resolution
 # Predictable increments, acceptable gaps from abandoned branches
+# Enhanced with locking for multi-session/worktree safety
 
 set -e
 
@@ -17,10 +18,78 @@ success() { echo -e "${GREEN}✅${NC} $*" >&2; }
 warn() { echo -e "${YELLOW}⚠️${NC} $*" >&2; }
 error() { echo -e "${RED}❌${NC} $*" >&2; }
 
+# ============================================================================
+# WORKTREE-AWARE PATH RESOLUTION
+# ============================================================================
+# Get repository root (works in both main repo and worktrees)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
+
 # Version file locations (Updated for MagmaBI structure)
-readonly BACKEND_PYPROJECT="backend/pyproject.toml"
-readonly FRONTEND_PACKAGE="frontend/package.json"
-readonly BACKEND_CONFIG="backend/api/config.py"
+readonly BACKEND_PYPROJECT="$REPO_ROOT/backend/pyproject.toml"
+readonly FRONTEND_PACKAGE="$REPO_ROOT/frontend/package.json"
+readonly BACKEND_CONFIG="$REPO_ROOT/backend/api/config.py"
+
+# ============================================================================
+# VERSION ASSIGNMENT LOCKING (Multi-Session Safety)
+# ============================================================================
+# Prevents concurrent version assignments from creating duplicates
+# Uses mkdir for atomic lock acquisition (POSIX standard)
+
+VERSION_LOCK_FILE="/tmp/magmabi-version-assignment.lock"
+
+# Acquire version assignment lock
+# Returns: 0 on success, 1 on failure (timeout)
+acquire_version_lock() {
+    local max_wait=30
+    local waited=0
+
+    while (( waited < max_wait )); do
+        # mkdir is atomic - only one process can succeed
+        if mkdir "$VERSION_LOCK_FILE" 2>/dev/null; then
+            # Write PID for stale lock detection
+            echo "$$" > "$VERSION_LOCK_FILE/pid"
+            echo "$(date -Iseconds)" > "$VERSION_LOCK_FILE/acquired"
+            # Set trap to clean up on exit
+            trap 'release_version_lock' EXIT
+            return 0
+        fi
+
+        # Check if lock holder is still alive
+        local holder_pid=$(cat "$VERSION_LOCK_FILE/pid" 2>/dev/null)
+        if [[ -n "$holder_pid" ]] && ! kill -0 "$holder_pid" 2>/dev/null; then
+            warn "Stale version lock detected (PID $holder_pid no longer running), cleaning up"
+            rm -rf "$VERSION_LOCK_FILE"
+            continue
+        fi
+
+        # Check if lock is very old (> 5 minutes = likely stale)
+        local acquired_time=$(cat "$VERSION_LOCK_FILE/acquired" 2>/dev/null)
+        if [[ -n "$acquired_time" ]]; then
+            local acquired_epoch=$(date -d "$acquired_time" +%s 2>/dev/null || echo 0)
+            local now_epoch=$(date +%s)
+            local age=$(( now_epoch - acquired_epoch ))
+            if (( age > 300 )); then
+                warn "Version lock is ${age}s old (likely stale), cleaning up"
+                rm -rf "$VERSION_LOCK_FILE"
+                continue
+            fi
+        fi
+
+        log "Version lock held by PID $holder_pid, waiting..."
+        sleep 1
+        (( waited++ ))
+    done
+
+    error "Could not acquire version lock after ${max_wait}s"
+    return 1
+}
+
+# Release version assignment lock
+release_version_lock() {
+    rm -rf "$VERSION_LOCK_FILE" 2>/dev/null || true
+    # Remove trap
+    trap - EXIT
+}
 # readonly FRONTEND_VERSION_FILE="frontend/lib/version.ts"
 
 # Get current version from package.json (source of truth)
@@ -147,56 +216,109 @@ get_next_sequential_version() {
     echo "$next_version"
 }
 
+# Check if a version already exists in recent git history
+# Args: $1 = version to check, $2 = branch to search
+# Returns: 0 if version exists (collision), 1 if not found (safe to use)
+version_exists_in_recent_history() {
+    local version="$1"
+    local branch="$2"
+
+    # Check if version appears in recent commits on target branch
+    # Look for version assignment commits in last 50 commits
+    if git log "origin/$branch" --oneline -50 --grep="version.*$version" 2>/dev/null | grep -q .; then
+        return 0  # Collision detected
+    fi
+
+    # Also check if any tags exist with this version
+    if git tag -l "v$version" "$version" 2>/dev/null | grep -q .; then
+        return 0  # Collision detected
+    fi
+
+    return 1  # No collision
+}
+
 # Assign version based on target branch's current version
 # Called at finish time to avoid race conditions and merge conflicts
+# Enhanced with locking and collision detection for multi-session safety
 assign_version() {
     local branch_type="$1"
     local forced_increment="$2"  # Optional: "major", "minor", or "patch"
     local branch_name="$(git branch --show-current)"
+    local max_retries=3
+    local retry=0
 
     log "Assigning version for $branch_name..."
 
-    # Fetch latest develop/main to get current version
-    git fetch origin 2>/dev/null || true
+    # Acquire version lock to prevent concurrent assignments
+    acquire_version_lock || {
+        error "Could not acquire version lock - another session may be assigning version"
+        return 1
+    }
 
-    # Get next version based on the target branch's current state
-    local increment_type
-    if [[ -n "$forced_increment" ]]; then
-        increment_type="$forced_increment"
-        log "Using forced increment type: $increment_type"
-    else
-        increment_type=$(auto_detect_increment "$branch_type")
-        log "Auto-detected increment type: $increment_type"
-    fi
+    while (( retry < max_retries )); do
+        # Fresh fetch to get latest remote state
+        git fetch origin 2>/dev/null || true
 
-    # For features/hotfixes finishing into develop/main, check what the target branch version is
-    local base_branch
-    case "$branch_type" in
-        hotfix)
-            base_branch="main"
-            ;;
-        feature)
-            base_branch="develop"
-            ;;
-        *)
-            base_branch="develop"
-            ;;
-    esac
+        # Get next version based on the target branch's current state
+        local increment_type
+        if [[ -n "$forced_increment" ]]; then
+            increment_type="$forced_increment"
+            log "Using forced increment type: $increment_type"
+        else
+            increment_type=$(auto_detect_increment "$branch_type")
+            log "Auto-detected increment type: $increment_type"
+        fi
 
-    # Get version from target branch
-    local target_version=$(git show "origin/$base_branch:frontend/package.json" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "0.0.0")
-    log "Current $base_branch version: $target_version"
+        # For features/hotfixes finishing into develop/main, check what the target branch version is
+        local base_branch
+        case "$branch_type" in
+            hotfix)
+                base_branch="main"
+                ;;
+            feature)
+                base_branch="develop"
+                ;;
+            *)
+                base_branch="develop"
+                ;;
+        esac
 
-    # Calculate next version
-    local next_version=$(increment_version "$target_version" "$increment_type")
-    log "Next version will be: $next_version"
+        # Get version from target branch (from remote to ensure freshness)
+        local target_version=$(git show "origin/$base_branch:frontend/package.json" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "0.0.0")
+        log "Current $base_branch version: $target_version"
 
-    # Apply version to files
-    update_all_versions "$next_version"
+        # Calculate next version
+        local next_version=$(increment_version "$target_version" "$increment_type")
+        log "Candidate version: $next_version"
 
-    success "Version $next_version assigned!"
-    echo "$next_version"
-    return 0
+        # CHECK FOR COLLISION: Has this version been used recently?
+        if version_exists_in_recent_history "$next_version" "$base_branch"; then
+            warn "Version $next_version already assigned in recent history"
+            log "Trying next version..."
+            # Increment again to get next available
+            next_version=$(increment_version "$next_version" "$increment_type")
+            ((retry++))
+            continue
+        fi
+
+        log "Version $next_version is available"
+
+        # Apply version to files
+        update_all_versions "$next_version"
+
+        # Release lock before returning
+        release_version_lock
+
+        success "Version $next_version assigned!"
+        echo "$next_version"
+        return 0
+    done
+
+    # Release lock on failure
+    release_version_lock
+
+    error "Could not assign unique version after $max_retries attempts"
+    return 1
 }
 
 # ============================================================================

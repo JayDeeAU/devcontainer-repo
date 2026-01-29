@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # .devcontainer/scripts/restore-extensions.sh
 # Restore extensions from backup
+# Works correctly from both main repo and worktrees
+
+# Get repository root (works in both main repo and worktrees)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
 
 BACKUP_DIR="$HOME/.extension-manager/backups"
-DEVCONTAINER_JSON="$(pwd)/.devcontainer/devcontainer.json"
+DEVCONTAINER_JSON="$REPO_ROOT/.devcontainer/devcontainer.json"
 
 if [ ! -d "$BACKUP_DIR" ]; then
     echo "❌ No backups found"
