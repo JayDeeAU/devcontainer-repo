@@ -223,13 +223,21 @@ version_exists_in_recent_history() {
     local version="$1"
     local branch="$2"
 
-    # Check if version appears in recent commits on target branch
-    # Look for version assignment commits in last 50 commits
-    if git log "origin/$branch" --oneline -50 --grep="version.*$version" 2>/dev/null | grep -q .; then
+    # Method 1: Check if version is CURRENTLY set on target branch
+    # This is the most reliable check - avoids false positives from merge commits
+    local target_branch_version=$(git show "origin/$branch:frontend/package.json" 2>/dev/null | jq -r '.version' 2>/dev/null)
+    if [[ "$target_branch_version" == "$version" ]]; then
+        return 0  # Version already on target branch
+    fi
+
+    # Method 2: Check for explicit version assignment commits only
+    # Pattern: "chore: assign version X.Y.Z" or "chore(version): X.Y.Z"
+    # This avoids false positives from merge commits that mention versions
+    if git log "origin/$branch" --oneline -50 --grep="^chore.*version.*$version" 2>/dev/null | grep -q .; then
         return 0  # Collision detected
     fi
 
-    # Also check if any tags exist with this version
+    # Method 3: Check if any tags exist with this version
     if git tag -l "v$version" "$version" 2>/dev/null | grep -q .; then
         return 0  # Collision detected
     fi
@@ -286,6 +294,36 @@ assign_version() {
         # Get version from target branch (from remote to ensure freshness)
         local target_version=$(git show "origin/$base_branch:frontend/package.json" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "0.0.0")
         log "Current $base_branch version: $target_version"
+
+        # Skip-if-already-set: Check if current branch already has a higher version
+        # This handles cases where version was set during merge conflict resolution
+        local current_branch_version=$(get_current_version)
+        if [[ "$current_branch_version" != "$target_version" ]]; then
+            # Compare versions - if current > target, version was already bumped
+            local current_parts=(${current_branch_version//./ })
+            local target_parts=(${target_version//./ })
+            local already_bumped=false
+
+            if (( ${current_parts[0]:-0} > ${target_parts[0]:-0} )); then
+                already_bumped=true
+            elif (( ${current_parts[0]:-0} == ${target_parts[0]:-0} )); then
+                if (( ${current_parts[1]:-0} > ${target_parts[1]:-0} )); then
+                    already_bumped=true
+                elif (( ${current_parts[1]:-0} == ${target_parts[1]:-0} )); then
+                    if (( ${current_parts[2]:-0} > ${target_parts[2]:-0} )); then
+                        already_bumped=true
+                    fi
+                fi
+            fi
+
+            if [[ "$already_bumped" == "true" ]]; then
+                log "Version already bumped on this branch: $current_branch_version (target: $target_version)"
+                log "Skipping version assignment"
+                release_version_lock
+                echo "$current_branch_version"
+                return 0
+            fi
+        fi
 
         # Calculate next version
         local next_version=$(increment_version "$target_version" "$increment_type")
