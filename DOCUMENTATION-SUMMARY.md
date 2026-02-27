@@ -153,7 +153,7 @@ cat ".devcontainer/WORKFLOWS-DETAILED-GUIDE.md"
 
 ```bash
 # Container manager help
-universal-container-manager help
+ucm help
 
 # Version manager help
 .devcontainer/scripts/version-manager.sh help
@@ -289,7 +289,7 @@ cat ".devcontainer/WORKFLOWS-DETAILED-GUIDE.md"  # Study workflow scenarios
 
 **Advanced**: (As needed)
 ```bash
-universal-container-manager help
+ucm help
 .devcontainer/scripts/version-manager.sh help
 # Read script source code for deep understanding
 ```

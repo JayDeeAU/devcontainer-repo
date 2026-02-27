@@ -531,7 +531,7 @@ curl https://api-magmabi-local.codemian.com/health
 
 ## Additional Resources
 
-- [Universal Container Manager](./scripts/universal-container-manager.sh)
+- [Universal Container Manager](./scripts/ucm.sh)
 - [Version Manager](./scripts/version-manager.sh)
 - [VSCode Launch Configuration](../.vscode/launch.json)
 - [Docker Compose Local](../docker/docker-compose.local.yml)

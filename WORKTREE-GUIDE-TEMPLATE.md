@@ -52,7 +52,7 @@ Worktrees in this setup are **temporary investigation spaces**, not development 
 
 ```bash
 # Create worktrees for production and staging debugging
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 ```
 
 This command:
@@ -165,7 +165,7 @@ env-local
 
 ### Creation
 - **Automatic:** First time running `env-prod --debug` or `env-staging --debug`
-- **Manual:** Run `universal-container-manager setup-worktrees`
+- **Manual:** Run `ucm setup-worktrees`
 - **Triggered:** When debug mode needs source mounting
 
 ### Maintenance
@@ -318,7 +318,7 @@ Ensure debug configurations point to worktrees:
 
 ```bash
 # Create it
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 
 # Or manually
 git worktree add --detach ../your-project-production main
@@ -336,7 +336,7 @@ rm -f .git/worktrees/your-project-production/locked
 # Or prune and recreate
 git worktree prune
 rm -rf ../your-project-production
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 ```
 
 ### "Path mappings don't work"

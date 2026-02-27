@@ -62,7 +62,7 @@ This is a **modern feature-based DevContainer environment** designed for univers
 - **Git Integration**: GitHub CLI with SSH key mounting
 - **Extension Management**: VS Code extension synchronization with backup/restore
 - **AI Integration**: Claude Code CLI with persistent credentials
-- **Universal Container Manager**: Multi-environment orchestration (prod/staging/local)
+- **UCM (Universal Container Manager)**: Multi-environment orchestration (prod/staging/local)
 - **Version Manager**: Sequential semantic versioning for parallel development
 
 ---
@@ -84,7 +84,7 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 └── scripts/                       # Environment and project setup
     ├── setup-environment.sh       # Main post-create setup
     ├── setup-project-dependencies.sh
-    ├── universal-container-manager.sh
+    ├── ucm.sh
     ├── version-manager.sh
     ├── config-generator.sh
     ├── sync-extensions.sh
@@ -645,7 +645,7 @@ fi
 
 ### Pull Policy Configuration
 
-When using the Universal Container Manager with your project's docker-compose files, **it is critical** to configure the `pull_policy` correctly for each environment to avoid using stale images.
+When using the UCM (Universal Container Manager) with your project's docker-compose files, **it is critical** to configure the `pull_policy` correctly for each environment to avoid using stale images.
 
 #### Problem: Stale Images After Build
 
@@ -744,9 +744,9 @@ services:
   - Similar to `if_not_present`
   - Only pulls if no image found locally
 
-#### Universal Container Manager Integration
+#### UCM (Universal Container Manager) Integration
 
-The Universal Container Manager build logic works as follows:
+The UCM (Universal Container Manager) build logic works as follows:
 
 ```bash
 # Staging/Local
@@ -783,7 +783,7 @@ If you're experiencing stale image issues, check:
 
 ### Debug Worktree Management
 
-The Universal Container Manager uses **Git worktrees** for isolated debugging of production and staging environments. This ensures your debug sessions don't affect your main workspace and allows you to preserve temporary debugging code between sessions.
+The UCM (Universal Container Manager) uses **Git worktrees** for isolated debugging of production and staging environments. This ensures your debug sessions don't affect your main workspace and allows you to preserve temporary debugging code between sessions.
 
 #### How Worktrees Work
 
@@ -873,7 +873,7 @@ local (debugger)    Yes              Current directory        (your branch)
 If you want to pre-create both worktrees:
 ```bash
 # Creates both prod and staging worktrees with latest sync
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 
 # This is optional - worktrees auto-create on first --debug use
 ```
@@ -1084,7 +1084,7 @@ All features and scripts are production-ready and actively used across multiple 
 2. **Host SSH Access** - SSH key mounting and git provider authentication
 3. **Extension Manager** - VS Code extension synchronization and backup
 4. **Claude Code** - AI development assistance with persistent credentials
-5. **Universal Container Manager** - Multi-environment Docker orchestration
+5. **UCM (Universal Container Manager)** - Multi-environment Docker orchestration
 6. **Version Manager** - Sequential semantic versioning for parallel development
 7. **Project Detection** - Automatic setup for Poetry and pnpm projects
 
@@ -1096,7 +1096,7 @@ When deploying to a new organization:
 2. **User Configuration**: Update default username pattern in features
 3. **Dotfiles Repository**: Update `DOTFILES_REPO` URL in setup-environment.sh
 4. **Templates**: Customize `.devcontainer/templates/` for common project types
-5. **Port Ranges**: Adjust port assignments in universal-container-manager.sh if needed
+5. **Port Ranges**: Adjust port assignments in ucm.sh if needed
 
 ### 📚 Legacy Documentation
 

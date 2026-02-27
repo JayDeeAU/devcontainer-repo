@@ -748,7 +748,7 @@
     {
       "label": "Maintenance: Setup Worktrees",
       "type": "shell",
-      "command": "universal-container-manager setup-worktrees",
+      "command": "ucm setup-worktrees",
       "group": "build",
       "options": {
         "shell": {

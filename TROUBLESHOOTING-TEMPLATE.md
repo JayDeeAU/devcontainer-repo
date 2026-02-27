@@ -1,6 +1,6 @@
 # Troubleshooting Guide Template
 
-**For projects using universal-container-manager infrastructure**
+**For projects using ucm infrastructure**
 
 > 💡 **Note:** This is a template. Customize with your project-specific:
 > - Service names
@@ -221,7 +221,7 @@ Worktrees are created on-demand but haven't been set up yet.
 **Solution:**
 ```bash
 # Create worktrees
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 
 # Verify creation
 ls -la /workspaces/
@@ -497,7 +497,7 @@ git worktree prune
 rm -rf ../your-project-production
 
 # Recreate
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 ```
 
 ---
@@ -509,7 +509,7 @@ universal-container-manager setup-worktrees
 **Universal Container Manager:**
 ```bash
 # Add debug flag to script
-bash -x .devcontainer/scripts/universal-container-manager.sh switch local 2>&1 | tee /tmp/debug.log
+bash -x infra-base/scripts/ucm.sh switch local 2>&1 | tee /tmp/debug.log
 ```
 
 **Docker Compose:**
@@ -626,7 +626,7 @@ cd /workspaces/your-project
 git worktree prune
 
 # Recreate fresh
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 ```
 
 ---
@@ -677,7 +677,7 @@ env | grep -E '(DOCKER|GIT|USER)'
 
 ### Documentation References
 
-- Universal Container Manager: `.devcontainer/scripts/universal-container-manager.sh`
+- Universal Container Manager: `infra-base/scripts/ucm.sh`
 - Debugging Guide: `.devcontainer/DEBUGGING-GUIDE-TEMPLATE.md`
 - Worktree Guide: `.devcontainer/WORKTREE-GUIDE-TEMPLATE.md`
 - Project Configuration: `.container-config.json`

@@ -38,15 +38,15 @@ This development environment consists of three integrated systems that work toge
 ```
 
 #### Integration Points:
-- **Calls**: `universal-container-manager.sh` for environment switching
+- **Calls**: `ucm.sh` for environment switching
 - **Calls**: `version-manager.sh` for version control
 - **Provides**: User-facing commands and aliases
 
 ---
 
-### 2. 🐳 Universal Container Manager
+### 2. 🐳 UCM (Universal Container Manager)
 
-**Location**: `.devcontainer/scripts/universal-container-manager.sh`  
+**Location**: `infra-base/scripts/ucm.sh`  
 **Scope**: Project-specific  
 **Purpose**: Multi-environment Docker orchestration
 
@@ -331,7 +331,7 @@ Generated via: `.devcontainer/scripts/config-generator.sh [template]`
    which gffs  # Should show function definition
    
    # Layer 2: Container Manager
-   .devcontainer/scripts/universal-container-manager.sh help
+   infra-base/scripts/ucm.sh help
    
    # Layer 3: Version Manager
    .devcontainer/scripts/version-manager.sh current

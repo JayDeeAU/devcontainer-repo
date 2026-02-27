@@ -201,7 +201,7 @@ Dotfiles (Commands) → Container Manager (Docker) → Version Manager (Versions
 │                                                    │
 │  ⚙️ Setup:                                        │
 │     config-generator.sh default                    │
-│     universal-container-manager status             │
+│     ucm status             │
 └────────────────────────────────────────────────────┘
 ```
 

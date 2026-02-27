@@ -1,6 +1,6 @@
 # Debugging Guide Template
 
-**For projects using universal-container-manager and multi-environment setup**
+**For projects using ucm and multi-environment setup**
 
 > 💡 **Note:** This is a template. Copy to your project and customize with your specific:
 > - Project name
@@ -534,7 +534,7 @@ docker logs CONTAINER_NAME
 .devcontainer/
 ├── devcontainer.json              # Dev container configuration
 ├── scripts/
-│   ├── universal-container-manager.sh  # Environment management
+│   ├── ucm.sh  # Environment management
 │   └── version-manager.sh              # Version synchronization
 
 .vscode/

@@ -64,7 +64,7 @@ Edit `.container-config.json` if needed:
 
 ```bash
 # Check configuration is valid
-universal-container-manager status
+ucm status
 
 # Start local environment
 env-local
@@ -223,7 +223,7 @@ These files are **identical across all projects** (from devcontainer-repo):
 ```
 .devcontainer/
 ├── scripts/
-│   ├── universal-container-manager.sh   # ← Same everywhere
+│   ├── ucm.sh   # ← Same everywhere
 │   ├── version-manager.sh               # ← Same everywhere
 │   └── config-generator.sh              # ← Same everywhere
 ├── ARCHITECTURE.md                      # ← Same everywhere
@@ -406,7 +406,7 @@ After setup, verify everything works:
 cat .container-config.json | jq .
 
 # 2. Container manager recognizes project
-universal-container-manager status
+ucm status
 
 # 3. Start local environment
 env-local
@@ -428,7 +428,7 @@ env-staging
 env-prod
 
 # 7. Test worktrees (if enabled)
-universal-container-manager setup-worktrees
+ucm setup-worktrees
 
 # 8. Test feature workflow
 gffs test-feature
@@ -585,7 +585,7 @@ If you have custom container management scripts:
 .devcontainer/scripts/config-generator.sh [template]
 
 # Validate setup
-universal-container-manager status
+ucm status
 env-local
 
 # Daily usage (same across all projects!)
