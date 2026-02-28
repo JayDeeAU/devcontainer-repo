@@ -38,6 +38,16 @@ echo "📦 Setting up project dependencies..."
 chmod +x .devcontainer/scripts/setup-project-dependencies.sh
 .devcontainer/scripts/setup-project-dependencies.sh
 
+# Render governance files from base submodules (if present)
+if [ -x "claude-base/base-init.sh" ]; then
+    echo "📐 Rendering Claude Base governance files..."
+    claude-base/base-init.sh --refresh || echo "⚠️ Claude Base rendering had warnings (non-blocking)"
+fi
+if [ -x "infra-base/scripts/infra-init.sh" ]; then
+    echo "🏗️ Validating infrastructure configuration..."
+    infra-base/scripts/infra-init.sh --validate || echo "⚠️ Infra validation had warnings (non-blocking)"
+fi
+
 # Set docker context
 echo "🐳 Setting docker context..."
 docker context use default
