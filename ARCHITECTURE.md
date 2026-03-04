@@ -79,7 +79,7 @@ Local            7700-7799     Yes (current)   Active development
 
 ### 3. 📦 Version Manager
 
-**Location**: `.devcontainer/scripts/version-manager.sh`  
+**Location**: `infra-base/scripts/version-manager.sh`  
 **Scope**: Project-specific  
 **Purpose**: Semantic versioning and file synchronization
 
@@ -334,7 +334,7 @@ Generated via: `.devcontainer/scripts/config-generator.sh [template]`
    infra-base/scripts/ucm.sh help
    
    # Layer 3: Version Manager
-   .devcontainer/scripts/version-manager.sh current
+   infra-base/scripts/version-manager.sh current
    ```
 
 ### Integration Issues?

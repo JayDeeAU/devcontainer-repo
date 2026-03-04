@@ -156,7 +156,7 @@ cat ".devcontainer/WORKFLOWS-DETAILED-GUIDE.md"
 ucm help
 
 # Version manager help
-.devcontainer/scripts/version-manager.sh help
+infra-base/scripts/version-manager.sh help
 
 # Config generator help
 .devcontainer/scripts/config-generator.sh --help
@@ -290,7 +290,7 @@ cat ".devcontainer/WORKFLOWS-DETAILED-GUIDE.md"  # Study workflow scenarios
 **Advanced**: (As needed)
 ```bash
 ucm help
-.devcontainer/scripts/version-manager.sh help
+infra-base/scripts/version-manager.sh help
 # Read script source code for deep understanding
 ```
 

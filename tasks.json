@@ -190,7 +190,7 @@
     {
       "label": "Set Specific Version",
       "type": "shell",
-      "command": ".devcontainer/scripts/version-manager.sh",
+      "command": "infra-base/scripts/version-manager.sh",
       "args": ["set", "${input:specificVersion}"],
       "group": "build",
       "presentation": {
@@ -207,7 +207,7 @@
     {
       "label": "Check Version Consistency",
       "type": "shell",
-      "command": ".devcontainer/scripts/version-manager.sh",
+      "command": "infra-base/scripts/version-manager.sh",
       "args": ["check"],
       "group": "test",
       "presentation": {
@@ -784,7 +784,7 @@
     {
       "label": "Maintenance: Sync All Versions",
       "type": "shell",
-      "command": ".devcontainer/scripts/version-manager.sh set ${input:syncVersion}",
+      "command": "infra-base/scripts/version-manager.sh set ${input:syncVersion}",
       "group": "build",
       "presentation": {
         "echo": true,
