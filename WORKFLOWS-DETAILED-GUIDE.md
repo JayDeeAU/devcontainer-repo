@@ -1074,7 +1074,7 @@ cat backend/api/config.py    # View production settings
 env-logs backend | grep "ENVIRONMENT=production"
 
 # Verify environment variables
-docker exec -it magmabi_backend-prod env | grep API_
+docker exec -it your-project_backend-prod env | grep API_
 ```
 
 ### **Investigation Best Practices:**
@@ -1263,19 +1263,19 @@ docker volume prune -f     # Remove unused volumes
 ##### **Container Issues:**
 ```bash
 # Check container status
-docker ps -a | grep magmabi
+docker ps -a | grep your-project
 
 # Inspect specific container
-docker inspect magmabi_backend-prod
+docker inspect your-project_backend-prod
 
 # Execute commands in container
-docker exec -it magmabi_backend-prod bash
+docker exec -it your-project_backend-prod bash
 ```
 
 ##### **Network Issues:**
 ```bash
 # Test container networking
-docker network ls | grep magmabi
+docker network ls | grep your-project
 
 # Test port accessibility
 curl -v http://localhost:7510/health    # Production
@@ -1286,10 +1286,10 @@ curl -v http://localhost:7710/health    # Local
 ##### **Volume Issues:**
 ```bash
 # Check volume mounts
-docker volume ls | grep magmabi
+docker volume ls | grep your-project
 
 # Inspect volume contents
-docker run --rm -v magmabi_redis_data_prod:/data alpine ls -la /data
+docker run --rm -v your-project_redis_data_prod:/data alpine ls -la /data
 ```
 
 #### **Environment Switching Management:**
@@ -3033,7 +3033,7 @@ curl -s http://localhost:7510/health | jq .
 echo ""
 echo "Key Metrics:"
 echo "- API Response Time: $(curl -w "%{time_total}" -s -o /dev/null http://localhost:7510/api/analytics)s"
-echo "- Memory Usage: $(docker stats --no-stream --format "{{.MemUsage}}" magmabi_backend-prod)"
+echo "- Memory Usage: $(docker stats --no-stream --format "{{.MemUsage}}" your-project_backend-prod)"
 echo "- Active Users: $(curl -s http://localhost:7510/api/metrics/users | jq .active_users)"
 
 # Check for errors

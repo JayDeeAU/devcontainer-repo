@@ -9,7 +9,8 @@ echo "🚀 Setting up development environment..."
 # Setup dotfiles
 echo "🏠 Setting up dotfiles..."
 if [ ! -d ~/dotfiles ]; then
-    git clone https://github.com/JayDeeAU/dotfiles.git ~/dotfiles
+    DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/yourorg/dotfiles.git}"
+    git clone "$DOTFILES_REPO" ~/dotfiles
     cd ~/dotfiles
     chmod +x ./dotbootstrap.sh
     ./dotbootstrap.sh || echo "⚠️ Dotfiles setup failed, continuing..."

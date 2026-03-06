@@ -27,13 +27,14 @@ if getent group vscode >/dev/null 2>&1; then
     groupdel vscode 2>/dev/null || true
 fi
 
-# Ensure joe user exists with correct UID/GID
-if ! id -u joe >/dev/null 2>&1; then
-    echo "Creating joe user with UID/GID 1000..."
-    groupadd -g 1000 joe
-    useradd -u 1000 -g 1000 -m -s /bin/bash joe
-    usermod -aG sudo joe
-    echo "joe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/joe
+TARGET_USER="${USERNAME:-developer}"
+# Ensure target user exists with correct UID/GID
+if ! id -u "$TARGET_USER" >/dev/null 2>&1; then
+    echo "Creating $TARGET_USER user with UID/GID 1000..."
+    groupadd -g 1000 "$TARGET_USER"
+    useradd -u 1000 -g 1000 -m -s /bin/bash "$TARGET_USER"
+    usermod -aG sudo "$TARGET_USER"
+    echo "$TARGET_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"$TARGET_USER"
 fi
 
 # Install fonts if requested (from original Dockerfile)

@@ -10,7 +10,7 @@ echo "🔍 Debug: Looking for Poetry..."
 which poetry || echo "Poetry not found in PATH"
 
 # Ensure Poetry is in PATH (it should be in /usr/local/bin from codemian-standards)
-export PATH="/usr/local/bin:/root/.local/bin:/home/joe/.local/bin:$PATH"
+export PATH="/usr/local/bin:/root/.local/bin:$HOME/.local/bin:$PATH"
 
 # Check if we're in a devcontainer template/feature repo (skip setup)
 if [ -d "features" ] && [ -d "templates" ] && [ -f "devcontainer.json" ]; then
@@ -24,7 +24,7 @@ echo "🚀 Setting up project dependencies..."
 if ! command -v poetry &> /dev/null; then
     echo "⚠️ Poetry not found in PATH, trying alternative installation..."
     curl -sSL https://install.python-poetry.org | python3 -
-    export PATH="/home/joe/.local/bin:$PATH"
+    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 # Poetry setup (if pyproject.toml exists)

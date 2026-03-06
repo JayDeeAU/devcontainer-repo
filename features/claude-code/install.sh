@@ -12,15 +12,16 @@ CREATE_ALIASES=${CREATEALIASES:-true}
 
 # Handle user situation - could be vscode or joe depending on feature order
 CONTAINER_USER=""
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
-    echo "✅ Found joe user (UID: $(id -u joe), GID: $(id -g joe))"
+TARGET_USER="${USERNAME:-developer}"
+if id -u "$TARGET_USER" >/dev/null 2>&1; then
+    CONTAINER_USER="$TARGET_USER"
+    echo "✅ Found $TARGET_USER user (UID: $(id -u "$TARGET_USER"), GID: $(id -g "$TARGET_USER"))"
 elif id -u vscode >/dev/null 2>&1; then
     CONTAINER_USER="vscode"
     echo "✅ Found vscode user (UID: $(id -u vscode), GID: $(id -g vscode))"
-    echo "💡 Note: Using vscode user - joe user will be created later by common-utils"
+    echo "💡 Note: Using vscode user - $TARGET_USER user will be created later by common-utils"
 else
-    echo "❌ No suitable user found (neither joe nor vscode)"
+    echo "❌ No suitable user found (neither $TARGET_USER nor vscode)"
     exit 1
 fi
 

@@ -12,7 +12,7 @@
       "installZsh": true,
       "configureZshAsDefaultShell": true,
       "installOhMyZsh": false,
-      "username": "joe",
+      "username": "developer",
       "userUid": "1000",
       "userGid": "1000",
       "upgradePackages": true,
@@ -74,15 +74,15 @@
     }
   },
   
-  "remoteUser": "joe",
-  "containerUser": "joe",
+  "remoteUser": "developer",
+  "containerUser": "developer",
   
   "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
   
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=${localEnv:HOME}/.ssh,target=/home/joe/.ssh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/joe/.claude,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.ssh,target=/home/developer/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached"
   ],
   
   "remoteEnv": {

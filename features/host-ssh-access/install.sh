@@ -17,22 +17,23 @@ if ! command -v ssh &> /dev/null; then
     apt-get update && apt-get install -y openssh-client
 fi
 
-# Ensure joe user has proper setup
-if ! id -u joe >/dev/null 2>&1; then
-    echo "⚠️  Creating joe user..."
-    groupadd -g 1000 joe
-    useradd -u 1000 -g 1000 -m -s /bin/bash joe
+# Ensure target user has proper setup
+TARGET_USER="${USERNAME:-developer}"
+if ! id -u "$TARGET_USER" >/dev/null 2>&1; then
+    echo "⚠️  Creating $TARGET_USER user..."
+    groupadd -g 1000 "$TARGET_USER"
+    useradd -u 1000 -g 1000 -m -s /bin/bash "$TARGET_USER"
 fi
 
-# Create SSH directory structure for joe user
+# Create SSH directory structure for target user
 echo "📁 Setting up SSH directory structure..."
-mkdir -p /home/joe/.ssh
-chown joe:joe /home/joe/.ssh
-chmod 700 /home/joe/.ssh
+mkdir -p /home/$TARGET_USER/.ssh
+chown $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh
+chmod 700 /home/$TARGET_USER/.ssh
 
 # Create SSH config for common git providers
 echo "⚙️  Creating SSH config..."
-cat > /home/joe/.ssh/config << 'EOF'
+cat > /home/$TARGET_USER/.ssh/config << 'EOF'
 # SSH config for git providers
 Host github.com
     HostName github.com
@@ -54,8 +55,8 @@ Host *
     UserKnownHostsFile /dev/null
 EOF
 
-chown joe:joe /home/joe/.ssh/config
-chmod 600 /home/joe/.ssh/config
+chown $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh/config
+chmod 600 /home/$TARGET_USER/.ssh/config
 
 # Create SSH test script for direct key usage
 echo "🧪 Creating SSH test script..."
@@ -65,7 +66,7 @@ cat > /usr/local/bin/test-ssh-access << 'EOF'
 
 echo "🔑 Testing SSH access to git providers (direct key mode)..."
 echo "📁 Available SSH keys:"
-ls -la /home/joe/.ssh/id_* 2>/dev/null || echo "No SSH keys found"
+ls -la "$HOME/.ssh/id_"* 2>/dev/null || echo "No SSH keys found"
 echo ""
 
 # Split providers by comma
@@ -153,28 +154,28 @@ fi
 
 # Create post-create setup script
 echo "🚀 Creating post-create setup script..."
-cat > /usr/local/bin/ssh-post-create << 'EOF'
+cat > /usr/local/bin/ssh-post-create << EOF
 #!/bin/bash
 # Post-create SSH setup
 
 echo "🔑 Post-create SSH setup..."
 
 # Fix permissions if SSH directory exists and is mounted
-if [ -d "/home/joe/.ssh" ]; then
+if [ -d "/home/$TARGET_USER/.ssh" ]; then
     echo "🔧 Fixing SSH permissions..."
-    chown -R joe:joe /home/joe/.ssh
-    chmod 700 /home/joe/.ssh
-    find /home/joe/.ssh -type f -exec chmod 600 {} \;
+    chown -R $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh
+    chmod 700 /home/$TARGET_USER/.ssh
+    find /home/$TARGET_USER/.ssh -type f -exec chmod 600 {} \;
 fi
 
 # Test connections if enabled
 if [ "$TEST_CONNECTIONS" = "true" ]; then
-    sudo -u joe test-ssh-access "$GIT_PROVIDERS"
+    sudo -u $TARGET_USER test-ssh-access "$GIT_PROVIDERS"
 fi
 
 # Setup git user if not configured
 if [ "$SETUP_GIT_CONFIG" = "true" ]; then
-    if [ -z "$(sudo -u joe git config --global user.name 2>/dev/null)" ]; then
+    if [ -z "\$(sudo -u $TARGET_USER git config --global user.name 2>/dev/null)" ]; then
         echo "⚙️  Git user not configured. Run 'setup-git-user' to configure."
     else
         echo "✅ Git user already configured"

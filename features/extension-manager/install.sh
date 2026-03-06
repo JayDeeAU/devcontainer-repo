@@ -15,7 +15,7 @@ BACKUP_EXTENSIONS=${BACKUPEXTENSIONS:-true}
 apt-get update && apt-get install -y jq inotify-tools
 
 # Create extension manager directory for user data
-mkdir -p /home/joe/.extension-manager
+mkdir -p /home/${USERNAME:-developer}/.extension-manager
 
 # Create symbolic links to scripts in devcontainer scripts directory
 # The actual scripts will be maintained in .devcontainer/scripts/
@@ -95,7 +95,7 @@ EOF
 fi
 
 # Set ownership for joe user
-chown -R joe:joe /home/joe/.extension-manager
+chown -R ${USERNAME:-developer}:${USERNAME:-developer} /home/${USERNAME:-developer}/.extension-manager
 
 echo "✅ Extension Manager installed successfully!"
 echo ""

@@ -1,538 +1,567 @@
-# MagmaBI Debugging Guide
+# Debugging Guide Template
 
-Complete guide to debugging MagmaBI applications in local, staging, and production environments.
+**For projects using ucm and multi-environment setup**
 
-## Table of Contents
-- [Quick Start](#quick-start)
-- [Environment Overview](#environment-overview)
-- [Local Debugging](#local-debugging)
-- [Debug Branch Workflow](#debug-branch-workflow)
-- [VSCode Debugger Setup](#vscode-debugger-setup)
-- [Troubleshooting](#troubleshooting)
+> 💡 **Note:** This is a template. Copy to your project and customize with your specific:
+> - Project name
+> - Service names
+> - Port numbers
+> - Technology stack details
+
+---
 
 ## Quick Start
 
-### Start Local Debugging Session
+### Start Development Environment
 ```bash
-# Regular local development (live source mounting)
+# Start your local development environment
 env-local
 
-# Local with debuggers in wait state (for breakpoints)
-env-local-debug
+# Check status
+env-status
+
+# View logs
+env-logs [service-name]
 ```
 
-### Debug Production/Staging Issues
-```bash
-# Switch to the branch you want to debug
-git switch main              # For production issues
-git switch develop           # For staging issues
-git switch feature/xyz       # For feature branch issues
+### Attach Debugger
+1. Ensure environment is running: `env-status`
+2. Open VS Code Run & Debug panel (F5)
+3. Select appropriate debug configuration
+4. Press F5 or click green play button
 
-# Create debug branch from current branch
-debug-start issue-name    # or: dbs issue-name
-
-# List active debug branches
-debug-list    # or: dbl
-
-# End debug session (returns to parent branch, deletes debug branch)
-debug-end     # or: dbf
-```
+---
 
 ## Environment Overview
 
-### Local Environment (7700-7799 ports)
-- **Purpose**: Development and debugging
-- **Source Code**: Live-mounted from workspace (hot reload)
-- **Build Metadata**: Generated via `.env.local.buildinfo`
-- **Use Cases**:
-  - Feature development
-  - Testing production/staging issues
-  - Breakpoint debugging
+This project uses three isolated environments:
 
-### Staging Environment (7600-7699 ports)
-- **Purpose**: Pre-production testing
-- **Source Code**: Built into Docker images
-- **Build Metadata**: Baked into images during build
-- **Use Cases**:
-  - Testing current branch in prod-like environment
-  - Integration testing
-  - Performance testing
+| Environment | Port Range | Branch Pattern | Purpose |
+|-------------|-----------|----------------|---------|
+| **Local** | 7700-7799 | `feature/*`, `hotfix/*` | Active development |
+| **Staging** | 7600-7699 | `develop` | Pre-production testing |
+| **Production** | 7500-7599 | `main` | Deployment monitoring |
 
-### Production Environment (7500-7599 ports)
-- **Purpose**: Production deployment simulation
-- **Source Code**: Built into Docker images from main branch
-- **Build Metadata**: Baked into images during build
-- **Branch Behavior**: Tracks current branch → switches to main → runs operations → restores original branch
-- **Use Cases**:
-  - Pre-deployment testing
-  - Production hotfix testing
+### Common Commands
 
-## Local Debugging
-
-### Regular Local Development
-
-**Start environment:**
 ```bash
-env-local
+# Environment Management
+env-local              # Start local development
+env-staging            # Start staging environment
+env-prod               # Start production environment
+
+# Debug Modes
+env-local-debug        # Local with debuggers in wait state
+
+# Debug Branch Workflow
+git switch main        # Switch to branch you want to debug
+dbs issue-name         # Create debug branch from current branch
+dbl                    # List active debug branches
+dbf                    # End debug session, return to parent branch
+
+# Utilities
+env-status             # Show all environments
+env-health             # Health check current environment
+env-stop [env]         # Stop specific or all environments
+env-logs [service]     # View service logs
 ```
 
-**Features:**
-- Live source code mounting
-- Hot reload (Next.js + FastAPI)
-- Automatic dependency detection
-- Build metadata from `.env.local.buildinfo`
+---
 
-**Access points:**
-- Frontend: https://magmabi-local.codemian.com
-- Backend API: https://api-magmabi-local.codemian.com
-- Flower (Celery): https://flower-local.codemian.com
-- RedisInsight: https://redis-local.codemian.com
+## Debug Port Reference
 
-### Local Debug Mode (Debuggers Enabled)
+Update this table with your project's actual debug ports:
 
-**Start debug environment:**
-```bash
-env-local-debug
+| Service | Local Port | Staging Port | Production Port |
+|---------|------------|--------------|-----------------|
+| Backend API Debug | 7711 | 7611 | 7511 |
+| Frontend Debug | 9229 | 9229 | 9229 |
+| Worker Debug | 7712 | 7612 | 7512 |
+
+---
+
+## VS Code Debugging
+
+### Launch Configurations
+
+Your `.vscode/launch.json` should include configurations for:
+
+1. **Backend Debugging** (Python, Node.js, etc.)
+   ```jsonc
+   {
+     "name": "Local: Backend Service",
+     "type": "debugpy",  // or "node" for Node.js
+     "request": "attach",
+     "connect": {
+       "host": "localhost",
+       "port": 7711
+     },
+     "pathMappings": [{
+       "localRoot": "${workspaceFolder}/backend",
+       "remoteRoot": "/app"
+     }]
+   }
+   ```
+
+2. **Frontend Debugging** (React, Next.js, etc.)
+   ```jsonc
+   {
+     "name": "Local: Frontend Service",
+     "type": "node",
+     "request": "attach",
+     "port": 9229,
+     "restart": true,
+     "localRoot": "${workspaceFolder}/frontend",
+     "remoteRoot": "/app"
+   }
+   ```
+
+3. **Compound Configurations** (Full Stack)
+   ```jsonc
+   {
+     "name": "Full Stack Debug",
+     "configurations": [
+       "Local: Backend Service",
+       "Local: Frontend Service"
+     ]
+   }
+   ```
+
+### Simplifying Configurations with Variables
+
+To reduce duplication across environments, use configuration variables:
+
+```jsonc
+// .vscode/settings.json
+{
+  "yourProject.environment": "local",
+  "yourProject.debugPorts": {
+    "local": { "backend": 7711, "frontend": 9229 },
+    "staging": { "backend": 7611, "frontend": 9229 },
+    "prod": { "backend": 7511, "frontend": 9229 }
+  }
+}
+
+// .vscode/launch.json
+{
+  "name": "Backend (${config:yourProject.environment})",
+  "port": "${config:yourProject.debugPorts.${config:yourProject.environment}.backend}"
+}
 ```
 
-**Features:**
-- All containers start with debuggers in wait state
-- Debuggers listen for VSCode attachment
-- Breakpoint support
-- Step-through debugging
-
-**Debug Ports:**
-- Backend FastAPI: 7711 (debugpy)
-- Celery Worker: 7712 (debugpy)
-- Celery Beat: 7713 (debugpy)
-- Next.js Frontend: 9229 (Node.js main), 9230 (Next.js)
-
-**VSCode Launch Configurations:**
-- `Local: Backend FastAPI`
-- `Local: Celery Worker`
-- `Local: Celery Beat`
-- `Local: Next.js Frontend`
-- `Local: Full Stack` (compound)
-- `Local: Backend Only` (compound)
+---
 
 ## Debug Branch Workflow
 
-### When to Use Debug Branches
+### Concept
+Debug branches are **temporary scratch branches** for investigating production/staging issues with full source mounting in local environment.
 
-Debug branches are temporary branches for testing production or staging issues in your local environment with full source mounting.
-
-**Use debug branches when:**
+### When to Use
 - Investigating production bugs
 - Testing staging issues locally
-- Need to reproduce specific version behavior
-- Want to test hotfix before creating official hotfix branch
+- Reproducing specific version behavior
+- Testing hotfix before creating official hotfix branch
 
-**Don't use debug branches for:**
-- Regular feature development (use feature branches)
-- Long-term work (use appropriate git-flow branches)
-
-### Creating Debug Branches
-
-**From any branch:**
+### Usage Workflow
 ```bash
-# Switch to the branch you want to debug
-git switch main              # For production issues
-git switch develop           # For staging issues
-git switch feature/auth      # For feature branch issues
+# 1. Switch to the branch you want to debug
+git switch main           # For production issues
+git switch develop        # For staging issues
+git switch feature/auth   # For feature branch issues
 
-# Create debug branch
-dbs <issue-name>
-```
-
-**Examples:**
-
-From main (production):
-```bash
-git switch main
+# 2. Create debug branch from current branch
 dbs payment-timeout
 # Creates: debug/main-payment-timeout-20251021-143022
-```
 
-From develop (staging):
-```bash
-git switch develop
-dbs auth-error
-# Creates: debug/develop-auth-error-20251021-143045
-```
+# 3. Environment auto-starts with source mounting
+# Make changes, add debug prints, test fixes
 
-From feature branch:
-```bash
-git switch feature/auth-login
-dbs token-refresh
-# Creates: debug/feature-auth-login-token-refresh-20251021-143100
-```
-
-**What happens:**
-1. Detects current branch as parent
-2. Fetches latest from origin for current branch
-3. Creates timestamped debug branch
-4. Switches to new debug branch
-5. Automatically starts `env-local` environment
-6. Ready for debugging with full source mounting
-
-### Working in Debug Branches
-
-Once your debug branch is created:
-
-1. **Environment is running**: Local environment auto-started
-2. **Make changes**: Edit code with live reload
-3. **Test fixes**: Verify changes work
-4. **Commit work**: Optional - commit to debug branch if needed
-
-```bash
-# Make changes to code
-# Test changes
-
-# Optional: commit changes
-git add .
-git commit -m "debug: fix payment timeout issue"
-
-# Can switch to other branches if needed
-git switch feature/my-feature
-
-# Return to debug branch later
-git switch debug/main-payment-timeout-20251021-143022
-```
-
-### Listing Debug Branches
-
-```bash
-debug-list
-# or
+# 4. List active debug branches
 dbl
-```
 
-**Output example:**
-```
-🐛 Active Debug Branches
-========================
-
-  → debug/main-payment-timeout-20251021-143022 (current)
-    Parent: main | Issue: payment-timeout
-
-    debug/develop-auth-error-20251021-143045
-    Parent: develop | Issue: auth-error
-
-    debug/feature-auth-login-token-refresh-20251021-143100
-    Parent: feature/auth-login | Issue: token-refresh
-
-💡 Tips:
-   - Switch to a branch: git switch <branch-name>
-   - End debug session: debug-end (or dbf)
-   - Delete manually: git branch -D <branch-name>
-```
-
-### Ending Debug Sessions
-
-**Clean end (recommended):**
-```bash
-debug-end
-# or
+# 5. When done, end debug session
 dbf
+# Returns to parent branch (main/develop/feature/*)
+# Deletes debug branch
 ```
 
-**What happens:**
-1. Checks for uncommitted changes (prompts if found)
-2. Extracts parent branch from debug branch name
-3. Returns to parent branch (main, develop, feature/*, etc.)
-4. Deletes debug branch
+### Debug Branch Rules
+- ✅ Temporary branches for testing only
+- ✅ Auto-deleted by dbf command
+- ✅ Full source mounting in local environment
+- ✅ Can commit changes if needed (optional)
+- ❌ Not for long-term development
+- ❌ Use feature branches for actual development
 
-**Manual cleanup:**
-If `debug-end` fails or you want manual control:
-```bash
-# Switch back to parent branch
-git switch main              # or develop, or feature/xyz
+---
 
-# Delete debug branch
-git branch -D debug/main-issue-name-timestamp
+## Technology-Specific Debugging
+
+### Next.js / React (Frontend)
+
+**Next.js 15+ Recommended Setup:**
+
+1. **Enable debugging in package.json:**
+   ```json
+   {
+     "scripts": {
+       "dev": "NODE_OPTIONS='--inspect=0.0.0.0:9229' next dev --port 8080",
+       "dev:no-debug": "next dev --port 8080"
+     }
+   }
+   ```
+
+2. **Simple attach configuration:**
+   ```jsonc
+   {
+     "name": "Next.js Server",
+     "type": "node",
+     "request": "attach",
+     "port": 9229,
+     "restart": true
+   }
+   ```
+
+3. **Full stack with browser:**
+   ```jsonc
+   {
+     "name": "Next.js Full Stack",
+     "type": "node",
+     "request": "attach",
+     "port": 9229,
+     "serverReadyAction": {
+       "pattern": "ready - started server.*http://localhost:([0-9]+)",
+       "uriFormat": "http://localhost:%s",
+       "action": "debugWithChrome"
+     }
+   }
+   ```
+
+**Breakpoint Tips:**
+- Server Components: Breakpoints work in `.tsx` files
+- API Routes: Breakpoints work in `route.ts` files
+- Client Components: Use Chrome DevTools or attach browser debugger
+
+### Python / FastAPI (Backend)
+
+**Enable debugpy:**
+```yaml
+# docker-compose.local-debug.yml
+services:
+  backend:
+    command: python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn api.asgi:api --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Debug Branch Naming Convention
-
-Debug branches follow this pattern:
-```
-debug/<parent-branch-sanitized>-<issue-name>-<timestamp>
-
-Examples:
-debug/main-payment-timeout-20251021-143022
-debug/develop-auth-error-20251021-143045
-debug/feature-auth-login-token-refresh-20251021-143100
-debug/release-2.7.0-hotfix-20251021-143200
-```
-
-**Components:**
-- `debug/`: Namespace for all debug branches
-- `<parent-branch-sanitized>`: Parent branch name with `/` replaced by `-`
-  - `main` → `main`
-  - `develop` → `develop`
-  - `feature/auth-login` → `feature-auth-login`
-  - `release/2.7.0` → `release-2.7.0`
-- `<issue-name>`: Descriptive issue name
-- `<timestamp>`: YYYYmmdd-HHMMSS for uniqueness
-
-## VSCode Debugger Setup
-
-### Prerequisites
-
-**Extensions required:**
-- Python Debugger (debugpy)
-- JavaScript Debugger (built-in)
-
-**Container must be running:**
-```bash
-# Regular local (debuggers not waiting)
-env-local
-
-# Debug mode (debuggers waiting for attachment)
-env-local-debug
+**VS Code configuration:**
+```jsonc
+{
+  "name": "Python Backend",
+  "type": "debugpy",
+  "request": "attach",
+  "connect": {
+    "host": "localhost",
+    "port": 7711
+  },
+  "pathMappings": [{
+    "localRoot": "${workspaceFolder}/backend",
+    "remoteRoot": "/app"
+  }],
+  "justMyCode": false  // Debug into libraries if needed
+}
 ```
 
-### Backend Debugging (Python/FastAPI)
+### Node.js / Express (Backend)
 
-**1. Start local-debug environment:**
-```bash
-env-local-debug
+**Enable inspector:**
+```json
+{
+  "scripts": {
+    "dev": "NODE_OPTIONS='--inspect=0.0.0.0:9229' nodemon server.js"
+  }
+}
 ```
 
-**2. Set breakpoints in Python code:**
-- Open backend files in VSCode
-- Click left gutter to set breakpoints
-
-**3. Attach debugger:**
-- Press F5 or Run → Start Debugging
-- Select: `Local: Backend FastAPI`
-
-**4. Trigger code path:**
-- Make API requests to trigger breakpoints
-- Debugger will pause at breakpoints
-
-**Debugging Celery tasks:**
-- Use `Local: Celery Worker` configuration
-- Set breakpoints in task files
-- Trigger task execution
-
-### Frontend Debugging (Next.js)
-
-**1. Start local-debug environment:**
-```bash
-env-local-debug
+**VS Code configuration:**
+```jsonc
+{
+  "name": "Node.js Backend",
+  "type": "node",
+  "request": "attach",
+  "port": 9229,
+  "restart": true,
+  "skipFiles": ["<node_internals>/**"]
+}
 ```
 
-**2. Set breakpoints in TypeScript/React code:**
-- Open frontend files
-- Set breakpoints
-
-**3. Attach debugger:**
-- Select: `Local: Next.js Frontend`
-- Opens browser debugging tools
-
-**4. Debug in browser:**
-- Use Chrome DevTools
-- Inspect React components
-- Debug client-side logic
-
-### Multi-Service Debugging
-
-**Full stack debugging:**
-```bash
-# Select compound configuration
-"Local: Full Stack"
-```
-
-Attaches debuggers to:
-- Backend FastAPI
-- Celery Worker
-- Next.js Frontend
-
-**Backend only:**
-```bash
-"Local: Backend Only"
-```
-
-Attaches debuggers to:
-- Backend FastAPI
-- Celery Worker
-- Celery Beat
+---
 
 ## Troubleshooting
 
-### Debugger Won't Attach
+### "Cannot connect to debug port"
 
-**Issue**: "Cannot connect to debugger"
+**Symptoms:** VSCode can't attach to debugger
+
+**Solutions:**
+1. Check service is running: `env-status`
+2. Check debug port is exposed: `docker ps | grep YOUR_SERVICE`
+3. Check logs: `env-logs backend`
+4. Restart with debug mode: `env-stop && env-local --debug`
+
+### "Breakpoints not working"
+
+**Symptoms:** Breakpoints appear hollow/not binding
+
+**Solutions:**
+1. Verify source maps enabled (frontend)
+2. Check path mappings match container structure:
+   ```jsonc
+   "localRoot": "${workspaceFolder}/backend",  // Your local path
+   "remoteRoot": "/app"  // Container path
+   ```
+3. Ensure `justMyCode: false` for library debugging
+4. Try restarting debugger (Ctrl+Shift+F5)
+
+### "env-local fails on host"
+
+**Symptoms:** Command works in dev container but not on host
+
+**Solutions:**
+1. Create required Docker networks:
+   ```bash
+   docker network create your-project-network-local
+   docker network create redis_admin_network  # if used
+   ```
+2. Check `.container-config.json` for network requirements
+
+### "Debug branch won't delete"
+
+**Symptoms:** Cannot delete debug branch
 
 **Solutions:**
 ```bash
-# 1. Verify containers are running
-docker ps | grep magmabi
+# If you're on the debug branch, switch first
+git switch main
 
-# 2. Check if ports are open
-lsof -i :7711  # Backend
-lsof -i :9229  # Frontend
-
-# 3. Restart debug environment
-env-stop
-env-local-debug
-
-# 4. Check container logs
-env-logs backend
-```
-
-### Dependencies Changed Warning
-
-**Issue**: "Dependencies have changed since last build!"
-
-**Solution:**
-```bash
-# Rebuild local environment
-env-local-build
-# or
-env-local --build
-```
-
-### Port Already in Use
-
-**Issue**: "Port 7700 already in use"
-
-**Solution:**
-```bash
-# Stop all environments first
-env-stop
-
-# Check what's using the port
-lsof -i :7700
-
-# Kill the process if needed
-kill -9 <PID>
-
-# Restart environment
-env-local
-```
-
-### Debug Branch Won't Delete
-
-**Issue**: Cannot delete debug branch
-
-**Solution:**
-```bash
 # Force delete
 git branch -D debug/main-issue-name-timestamp
 
-# If branch is current branch, switch to another first
-git switch main
-git branch -D debug/main-issue-name-timestamp
+# Use dbf for clean automated cleanup
+dbf
 ```
 
-### Build Metadata Not Showing
+### "Source maps not resolving"
 
-**Issue**: Version shows as "unknown" or "dev"
-
-**For local environment:**
-```bash
-# Regenerate buildinfo
-rm .env.local.buildinfo
-env-local
-```
-
-**For staging/prod:**
-```bash
-# Rebuild images
-env-staging-build
-# or
-env-prod-build
-```
-
-### Uncommitted Changes Blocking Debug-End
-
-**Issue**: "You have uncommitted changes!"
+**Symptoms:** Debugger shows wrong line numbers
 
 **Solutions:**
-```bash
-# Option 1: Commit changes
-git add .
-git commit -m "debug: description"
+1. **Frontend:** Ensure Next.js generates source maps:
+   ```js
+   // next.config.js
+   module.exports = {
+     productionBrowserSourceMaps: false,  // Production
+     // Dev mode generates them by default
+   }
+   ```
+2. **Backend:** Check compiler settings (TypeScript/Babel)
+3. Clear build cache: `rm -rf .next` (frontend) or `__pycache__` (Python)
 
-# Option 2: Stash changes
-git stash
-
-# Option 3: Discard changes
-git reset --hard HEAD
-
-# Then retry
-debug-end
-```
+---
 
 ## Best Practices
 
-### 1. Always Use Debug Branches for Production Issues
+### Development Workflow
+1. ✅ Always work in **feature branches**, not main/develop
+2. ✅ Use `env-local` for active development
+3. ✅ Test in `env-staging` before merging
+4. ✅ Use debug branches only for investigating issues
 
-```bash
-# ✅ Good
-dbs payment-timeout      # Creates clean debug branch
-# Make changes
-# Test
-dbf                      # Clean cleanup
+### Debugging Workflow
+1. ✅ Start environment before attaching debugger
+2. ✅ Use compound configurations for full-stack debugging
+3. ✅ Check health endpoints before debugging
+4. ✅ Add breakpoints in VSCode, not `debugger;` statements
 
-# ❌ Bad
-git switch main          # Direct changes to main
-# Make changes
+### Debug Branch Workflow
+1. ✅ Use for **investigation only**, not development
+2. ✅ Switch to parent branch first (git switch main/develop)
+3. ✅ Create debug branch (dbs issue-name)
+4. ✅ Clean up when done (dbf)
+5. ❌ **Don't use for long-term feature development**
+
+---
+
+## Performance Tips
+
+### Reduce Debug Overhead
+
+**Frontend:**
+- Use `dev:no-debug` script for performance testing
+- Disable source maps in production
+- Use Chrome DevTools for client-side only
+
+**Backend:**
+- Set `justMyCode: true` to skip library code
+- Use conditional breakpoints instead of many breakpoints
+- Disable auto-restart for heavy operations
+
+### Speed Up Container Startup
+
+1. Use Docker layer caching effectively
+2. Pre-build images for staging/prod: `env-staging --build`
+3. Use volumes for node_modules and build artifacts
+4. Adjust health check intervals if too aggressive
+
+---
+
+## Advanced Configuration
+
+### Custom Debug Ports
+
+If default ports conflict, update in `.container-config.json`:
+
+```json
+{
+  "environments": {
+    "local": {
+      "ports": {
+        "backend_debug": 7711,
+        "frontend_debug": 9229
+      }
+    }
+  }
+}
 ```
 
-### 2. Name Debug Branches Descriptively
+### Multi-Service Debugging
 
-```bash
-# ✅ Good
-dbs payment-timeout
-dbs auth-token-refresh
-dbs celery-task-stuck
+For microservices, create compound configurations:
 
-# ❌ Bad
-dbs test
-dbs bug
-dbs fix
+```jsonc
+{
+  "compounds": [
+    {
+      "name": "All Microservices",
+      "configurations": [
+        "Service A",
+        "Service B",
+        "Service C"
+      ],
+      "stopAll": true
+    }
+  ]
+}
 ```
 
-### 3. Clean Up Debug Branches Regularly
+### Remote Debugging
 
-```bash
-# List active debug branches
-dbl
+For debugging on remote servers:
 
-# End sessions you're done with
-dbf
-
-# Or manually delete old ones
-git branch -D debug/main-old-issue-20251001-120000
+```jsonc
+{
+  "name": "Remote Production",
+  "type": "debugpy",
+  "request": "attach",
+  "connect": {
+    "host": "192.168.1.100",  // Remote host
+    "port": 7511
+  },
+  "pathMappings": [{
+    "localRoot": "${workspaceFolder}/../your-project-production",
+    "remoteRoot": "/app"
+  }]
+}
 ```
 
-### 4. Use env-local-debug Only When Needed
+---
 
+## Health Check Endpoints
+
+Document your project's health endpoints:
+
+| Service | Endpoint | Expected Response |
+|---------|----------|-------------------|
+| Backend | `http://localhost:7710/health` | `{"status": "healthy"}` |
+| Frontend | `http://localhost:7700/api/health` | `200 OK` |
+| Database | Redis ping | `PONG` |
+
+---
+
+## Useful VS Code Extensions
+
+Recommended extensions for debugging:
+
+- **Python:** `ms-python.python`
+- **JavaScript/TypeScript:** `ms-vscode.js-debug`
+- **Docker:** `ms-azuretools.vscode-docker`
+- **GitLens:** `eamodio.gitlens` (for worktree management)
+- **Remote Containers:** `ms-vscode-remote.remote-containers`
+
+---
+
+## Getting Help
+
+### Debug Information Commands
 ```bash
-# Regular development
-env-local           # Faster startup, no debugger overhead
+# Check everything
+env-status
+env-health
 
-# When you need breakpoints
-env-local-debug     # Debuggers in wait state
+# Service-specific
+env-logs backend
+env-logs frontend
+
+# Docker inspection
+docker ps
+docker logs CONTAINER_NAME
 ```
 
-### 5. Check Build Metadata After Dependency Changes
+### Common Log Locations
+- Container logs: `docker logs CONTAINER_NAME`
+- Application logs: `/app/logs` (inside container)
+- Host logs: Check your volume mount configuration
 
-```bash
-# After npm install or poetry add
-env-local-build     # Rebuild with new dependencies
+### Support Channels
+- Internal docs: `.devcontainer/*.md`
+- Team chat: [Your team channel]
+- Issue tracker: [Your project issues]
 
-# Verify metadata
-curl https://api-magmabi-local.codemian.com/health
+---
+
+## Appendix: Configuration Files Reference
+
+### Key Files
+```
+.devcontainer/
+├── devcontainer.json              # Dev container configuration
+├── scripts/
+│   ├── ucm.sh  # Environment management
+│   └── version-manager.sh              # Version synchronization
+
+.vscode/
+├── launch.json                    # Debug configurations
+├── tasks.json                     # Task automation
+└── settings.json                  # Project settings
+
+docker/
+├── docker-compose.local.yml       # Local environment
+├── docker-compose.local-debug.yml # Local debug overlay
+├── docker-compose.staging.yml     # Staging environment
+└── docker-compose.prod.yml        # Production environment
+
+.container-config.json             # Project container configuration
 ```
 
-## Additional Resources
+### Customization Points
 
-- [Universal Container Manager](../infra-base/scripts/ucm.sh)
-- [Version Manager](./scripts/version-manager.sh)
-- [VSCode Launch Configuration](../.vscode/launch.json)
-- [Docker Compose Local](../docker/docker-compose.local.yml)
-- [Docker Compose Local Debug](../docker/docker-compose.local-debug.yml)
+1. **Port Numbers:** `.container-config.json` → `environments.[env].ports`
+2. **Debug Flags:** `docker-compose.*-debug.yml` → service commands
+3. **Health Checks:** `docker-compose.*.yml` → healthcheck sections
+4. **Path Mappings:** `.vscode/launch.json` → pathMappings arrays
+
+---
+
+**Last Updated:** [Your Date]  
+**Template Version:** 1.0.0  
+**Maintained By:** [Your Team]
+
+> 💡 **Tip:** Keep this document updated as your debugging setup evolves!

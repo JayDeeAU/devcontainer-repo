@@ -54,7 +54,7 @@ generate_config() {
     echo "Next steps:"
     echo "1. Review and customize .container-config.json"
     echo "2. Ensure your docker-compose files match the configuration"
-    echo "3. Test with: ucm status"
+    echo "3. Test with: zsh -ic 'ucm status'"
 }
 
 # Main execution
