@@ -1,3 +1,15 @@
+---
+doc_type: "guide"
+doc_lifecycle: "living"
+created: "2026-02-15"
+last_modified: "2026-03-08"
+owner: "cicd-engineer"
+status: "ACTIVE"
+review_frequency: "quarterly"
+next_review_due: "2026-06-08"
+archive_trigger: "never"
+---
+
 # DevContainer Repository - Technical Documentation
 
 > **📌 DevContainer Implementation Guide**: This document is for DevOps engineers, system administrators, and developers extending the devcontainer infrastructure. For daily development workflows, see [QUICK-START.md](QUICK-START.md).
@@ -62,8 +74,8 @@ This is a **modern feature-based DevContainer environment** designed for univers
 - **Git Integration**: GitHub CLI with SSH key mounting
 - **Extension Management**: VS Code extension synchronization with backup/restore
 - **AI Integration**: Claude Code CLI with persistent credentials
-- **UCM (Universal Container Manager)**: Multi-environment orchestration (prod/staging/local)
-- **Version Manager**: Sequential semantic versioning for parallel development
+
+> UCM (Universal Container Manager) and Version Manager are provided by `infra-base/` — see the [infra-base README](../infra-base/README.md).
 
 ---
 
@@ -78,19 +90,19 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 ├── devcontainer.json              # Main configuration file
 ├── features/                      # Custom feature definitions
 │   ├── organizational-standards/  # ✅ Development tools & utilities
-│   ├── host-ssh-access/           # ✅ SSH key mounting  
+│   ├── host-ssh-access/           # ✅ SSH key mounting
 │   ├── extension-manager/         # ✅ VS Code extension sync
 │   └── claude-code/              # ✅ AI assistance integration
 └── scripts/                       # Environment and project setup
     ├── setup-environment.sh       # Main post-create setup
     ├── setup-project-dependencies.sh
-    ├── ucm.sh
-    ├── version-manager.sh
-    ├── config-generator.sh
-    ├── sync-extensions.sh
-    ├── list-extensions.sh
-    └── restore-extensions.sh
+    ├── config-generator.sh        # Project config generator
+    ├── sync-extensions.sh         # Extension sync
+    ├── list-extensions.sh         # Extension status report
+    └── restore-extensions.sh      # Extension backup restore
 ```
+
+> **Note**: UCM (`ucm.sh`) and Version Manager (`version-manager.sh`) have moved to `infra-base/scripts/` per ADR-051. See the [infra-base README](../infra-base/README.md) for usage.
 
 ### Container Configuration Analysis
 
@@ -110,7 +122,7 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
     "installZsh": true,
     "configureZshAsDefaultShell": true,
     "installOhMyZsh": false,           // Disabled for performance
-    "username": "joe",                 // Custom user instead of vscode
+    "username": "developer",           // Custom user (change to your preferred username)
     "userUid": "1000",
     "userGid": "1000",
     "upgradePackages": true,
@@ -153,8 +165,8 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 ```json
 "mounts": [
   "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-  "source=${localEnv:HOME}/.ssh,target=/home/joe/.ssh,type=bind,consistency=cached",
-  "source=${localEnv:HOME}/.claude,target=/home/joe/.claude,type=bind,consistency=cached"
+  "source=${localEnv:HOME}/.ssh,target=/home/developer/.ssh,type=bind,consistency=cached",
+  "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached"
 ]
 ```
 
@@ -434,7 +446,7 @@ features/<feature-name>/
    ```bash
    # Detect container user (customize list for your setup)
    CONTAINER_USER=""
-   for user in youruser joe vscode; do
+   for user in developer youruser vscode; do
        if id -u $user >/dev/null 2>&1; then
            CONTAINER_USER="$user"
            break
@@ -973,8 +985,8 @@ ENABLE_OPTION=${ENABLEOPTION:-true}
 
 # User detection pattern (copy from existing features)
 CONTAINER_USER=""
-if id -u joe >/dev/null 2>&1; then
-    CONTAINER_USER="joe"
+if id -u developer >/dev/null 2>&1; then
+    CONTAINER_USER="developer"
 elif id -u vscode >/dev/null 2>&1; then
     CONTAINER_USER="vscode"
 else
@@ -1017,7 +1029,7 @@ Add to `.devcontainer/devcontainer.json`:
 
 1. **Test in isolation** by creating a test devcontainer.json
 2. **Follow the user detection pattern** used in existing features
-3. **Use proper ownership commands** for joe user files
+3. **Use proper ownership commands** for container user files
 4. **Handle optional dependencies** gracefully
 5. **Provide meaningful error messages**
 
@@ -1045,7 +1057,7 @@ fi
 ### Best Practices for Feature Development
 
 1. **Idempotent Operations**: Features should be safe to run multiple times
-2. **User Detection**: Always handle both joe and vscode users
+2. **User Detection**: Always handle multiple possible usernames (developer, vscode, etc.)
 3. **Error Handling**: Use `set -e` and provide meaningful error messages
 4. **Ownership**: Always set correct ownership for user files
 5. **Environment Variables**: Options become UPPERCASE environment variables

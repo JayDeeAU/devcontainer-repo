@@ -1,4 +1,16 @@
-# 🏗️ Development System Architecture
+---
+doc_type: "guide"
+doc_lifecycle: "living"
+created: "2026-02-15"
+last_modified: "2026-03-08"
+owner: "cicd-engineer"
+status: "ACTIVE"
+review_frequency: "quarterly"
+next_review_due: "2026-06-08"
+archive_trigger: "never"
+---
+
+# Development System Architecture
 
 ## Overview
 
@@ -183,7 +195,7 @@ TIME: ~5 seconds total
 │  ────────────────────────────────────────────────    │
 │  Responsibility: Environment and Docker management   │
 │  Examples: switch, status, health, worktrees         │
-│  Location: .devcontainer/scripts/                    │
+│  Location: infra-base/scripts/                       │
 └────────────────────┬─────────────────────────────────┘
                      │ uses
 ┌────────────────────▼─────────────────────────────────┐
@@ -191,7 +203,7 @@ TIME: ~5 seconds total
 │  ────────────────────────────────────────────────    │
 │  Responsibility: Version state and file sync         │
 │  Examples: bump, assign, check, current              │
-│  Location: .devcontainer/scripts/                    │
+│  Location: infra-base/scripts/                       │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -327,13 +339,13 @@ Generated via: `.devcontainer/scripts/config-generator.sh [template]`
 
 3. **Test each layer independently**:
    ```bash
-   # Layer 1: Dotfiles
+   # Layer 1: Dotfiles (user interface)
    which gffs  # Should show function definition
-   
-   # Layer 2: Container Manager
+
+   # Layer 2: Container Manager (infra-base)
    infra-base/scripts/ucm.sh help
-   
-   # Layer 3: Version Manager
+
+   # Layer 3: Version Manager (infra-base)
    infra-base/scripts/version-manager.sh current
    ```
 
