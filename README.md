@@ -12,6 +12,8 @@ archive_trigger: "never"
 
 # DevContainer Repository - Technical Documentation
 
+> **Setting up a new project?** This README is for devcontainer maintainers. For user setup, see [QUICK-START.md](QUICK-START.md). This devcontainer works standalone but pairs with optional companion layers — [claude-base](https://github.com/JayDeeAU/claude-base) (AI governance) and [infra-base](https://github.com/JayDeeAU/infra-base) (Docker orchestration) — which share `.project-config.json`.
+
 > **📌 DevContainer Implementation Guide**: This document is for DevOps engineers, system administrators, and developers extending the devcontainer infrastructure. For daily development workflows, see [QUICK-START.md](QUICK-START.md).
 
 ---
