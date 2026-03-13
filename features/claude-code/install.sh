@@ -27,12 +27,23 @@ fi
 
 USER_HOME="/home/$CONTAINER_USER"
 
-# Install Node.js if not present (Claude Code requires Node.js)
-if ! command -v node &> /dev/null; then
+# Install Node.js/npm if not present (Claude Code requires Node.js)
+# The devcontainer Node feature may install to /usr/local/share/nvm/ which
+# isn't always on PATH during feature installation. Check common locations.
+for dir in /usr/local/share/nvm/current/bin /usr/local/bin /usr/bin; do
+    if [ -x "$dir/node" ] && [ -x "$dir/npm" ]; then
+        export PATH="$dir:$PATH"
+        break
+    fi
+done
+
+if ! command -v npm &> /dev/null; then
     echo "📦 Installing Node.js (required for Claude Code)..."
     curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
     apt-get install -y nodejs
 fi
+
+echo "📦 Using Node $(node --version), npm $(npm --version)"
 
 # Install Claude Code CLI
 if [ "$INSTALL_LATEST" = "true" ]; then
