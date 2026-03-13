@@ -39,7 +39,8 @@ for dir in /usr/local/share/nvm/current/bin /usr/local/bin /usr/bin; do
 done
 
 if ! command -v npm &> /dev/null; then
-    echo "📦 npm not found — installing Node.js + npm via apt..."
+    echo "⚠️  npm not found via Node feature — falling back to system packages"
+    echo "⚠️  This may install an older Node.js version than expected"
     apt-get update -y
     apt-get install -y nodejs npm
 fi
