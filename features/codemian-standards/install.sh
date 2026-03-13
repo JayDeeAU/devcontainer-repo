@@ -6,6 +6,9 @@ set -e
 
 echo "Installing Codemian Organizational Standards..."
 
+# Remove stale yarn apt repo from base image — GPG key expired, yarn comes via corepack now
+rm -f /etc/apt/sources.list.d/yarn.list
+
 # Install base packages for all environments
 apt-get update && apt-get install -y \
     curl \
