@@ -21,10 +21,10 @@ This is a **universal devcontainer** — the same code is cloned into every proj
 | **Project dependencies** | `pyproject.toml`, `package.json` (project root) | Project team | Per-project packages |
 
 **Universal** — changes apply everywhere:
-- Base image (`mcr.microsoft.com/devcontainers/python:3.12-bookworm`)
-- External features (node, poetry, pnpm, docker-outside-of-docker, github-cli)
+- Dockerfile and base image (`mcr.microsoft.com/devcontainers/python:3.12-bookworm`)
+- External features (node, poetry, docker-outside-of-docker, github-cli)
 - Custom features (`features/codemian-standards`, `features/host-ssh-access`, `features/extension-manager`, `features/claude-code`)
-- Lifecycle scripts (`setup-environment.sh`, `install-dependencies.sh`, `setup-user.sh`)
+- Lifecycle scripts (`setup-environment.sh`, `install-dependencies.sh`)
 - VS Code extensions list and settings defaults
 
 **Per-project** — NOT in this repo:
@@ -104,15 +104,9 @@ echo "Installing My Feature..."
 # Options arrive as UPPERCASE env vars
 MY_OPTION=${MYOPTION:-true}
 
-# Detect container user (required pattern — copy from existing features)
-CONTAINER_USER=""
-for user in joe vscode; do
-    if id -u $user >/dev/null 2>&1; then
-        CONTAINER_USER="$user"
-        break
-    fi
-done
-[ -z "$CONTAINER_USER" ] && { echo "❌ No suitable user found"; exit 1; }
+# Detect UID 1000 user (created by Dockerfile with host username via build.args)
+CONTAINER_USER=$(getent passwd 1000 | cut -d: -f1)
+[ -z "$CONTAINER_USER" ] && { echo "❌ No UID 1000 user found"; exit 1; }
 
 USER_HOME="/home/$CONTAINER_USER"
 
@@ -121,8 +115,8 @@ if [ "$MY_OPTION" = "true" ]; then
     apt-get update && apt-get install -y some-package
 fi
 
-# Always fix ownership for user-owned files
-chown -R "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.config/my-feature" 2>/dev/null || true
+# Always fix ownership (use $(id -gn) — GID 100 group is 'users', not the username)
+chown -R "$CONTAINER_USER:$(id -gn $CONTAINER_USER)" "$USER_HOME/.config/my-feature" 2>/dev/null || true
 
 echo "✅ My Feature installed"
 ```
@@ -163,7 +157,7 @@ Verify:
 ### Modifying the Base Environment
 
 The base environment is defined in `devcontainer.json`:
-- `image`: The base Docker image
+- `build`: The Dockerfile and build args (including `USERNAME` via `${localEnv:USER}`)
 - External `features`: Third-party features from `ghcr.io`
 - `mounts`: Host directories mapped into the container
 - `remoteEnv`: Environment variables set in the container
@@ -185,7 +179,6 @@ devcontainer.json (updateContentCommand)
        └→ Auto-detect monorepo subdirs (frontend/, backend/, api/, web/, server/)
 
 devcontainer.json (postCreateCommand) — runs once after container creation
-  ├→ user-setup: setup-user.sh (rename developer → host user via $CONTAINER_USER)
   ├→ dotfiles: setup-environment.sh
   │    ├→ Clone ~/dotfiles + run dotbootstrap.sh (if not present)
   │    └→ infra-base/scripts/infra-init.sh --validate (if present, non-blocking)

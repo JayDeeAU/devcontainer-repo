@@ -97,7 +97,6 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 │   └── claude-code/              # ✅ AI assistance integration
 └── scripts/                       # Environment and project setup
     ├── setup-environment.sh       # Dotfiles + infra validation (postCreateCommand)
-    ├── setup-user.sh              # Runtime user rename (postCreateCommand)
     ├── install-dependencies.sh    # Re-runnable deps (updateContentCommand)
     ├── config-generator.sh        # Project config generator
     ├── sync-extensions.sh         # Extension sync
@@ -113,10 +112,16 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 ```json
 {
   "name": "Modern Python + Next.js Development Environment",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
-  "runArgs": ["--name", "devcontainer_codemian", "--hostname", "devcontainer"]
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": { "USERNAME": "${localEnv:USER}" }
+  },
+  "remoteUser": "${localEnv:USER}",
+  "containerUser": "${localEnv:USER}"
 }
 ```
+
+The Dockerfile creates a user matching the host username via `build.args`. This is the spec-supported mechanism for username parameterization — `${localEnv:USER}` resolves at build time, so the user exists in `/etc/passwd` before container start. The image is per-developer (non-portable), which is fine for local devcontainers.
 
 #### External Features (Third-Party)
 ```json
@@ -125,9 +130,7 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
     "installZsh": true,
     "configureZshAsDefaultShell": true,
     "installOhMyZsh": false,           // Disabled for performance
-    "username": "developer",           // Custom user (change to your preferred username)
-    "userUid": "1000",
-    "userGid": "100",
+    "username": "none",                // User created by Dockerfile, not common-utils
     "upgradePackages": true,
     "nonFreePackages": false
   },
@@ -176,7 +179,6 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 ```json
 "updateContentCommand": "chmod +x .devcontainer/scripts/install-dependencies.sh && .devcontainer/scripts/install-dependencies.sh",
 "postCreateCommand": {
-  "user-setup": "chmod +x .devcontainer/scripts/setup-user.sh && sudo .devcontainer/scripts/setup-user.sh",
   "dotfiles": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
   "vscode": "mkdir -p .vscode && [ -f .devcontainer/tasks.json ] && cp .devcontainer/tasks.json .vscode/tasks.json || true",
   "renders": "[ -x claude-base/base-init.sh ] && claude-base/base-init.sh --refresh || true"
@@ -238,20 +240,17 @@ features/<feature-name>/
 
 **install.sh Implementation Details**:
 
-1. **User Management Pattern**:
+1. **User Management Pattern** (UID 1000 detection):
    ```bash
-   # Handle existing vscode user/group conflicts
-   if id -u vscode >/dev/null 2>&1; then
-       userdel -r vscode 2>/dev/null || true
-   fi
-   
-   # Create custom user with correct UID 1000:GID 100 (ADR-004: NFS-compatible users group)
-   CONTAINER_USER="youruser"  # Change this to your preferred username
-   if ! id -u $CONTAINER_USER >/dev/null 2>&1; then
+   # Detect UID 1000 user (created by Dockerfile with host username via build.args)
+   TARGET_USER=$(getent passwd 1000 | cut -d: -f1)
+   if [ -z "$TARGET_USER" ]; then
+       TARGET_USER="developer"
+       echo "No UID 1000 user found, creating $TARGET_USER..."
        getent group 100 >/dev/null || groupadd -g 100 users
-       useradd -u 1000 -g 100 -m -s /bin/bash $CONTAINER_USER
-       usermod -aG sudo $CONTAINER_USER
-       echo "$CONTAINER_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$CONTAINER_USER
+       useradd -u 1000 -g 100 -m -s /bin/bash "$TARGET_USER"
+       usermod -aG sudo "$TARGET_USER"
+       echo "$TARGET_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"$TARGET_USER"
    fi
    ```
 
@@ -327,23 +326,18 @@ features/<feature-name>/
 
 **install.sh Implementation Details**:
 
-1. **SSH Directory Setup Pattern**:
+1. **System-Level SSH Setup** (survives `~/.ssh` bind mount overlay):
    ```bash
-   # Create SSH directory structure for container user
-   # (CONTAINER_USER detected using pattern above)
-   USER_HOME="/home/$CONTAINER_USER"
-   mkdir -p "$USER_HOME/.ssh"
-   chown "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.ssh"
-   chmod 700 "$USER_HOME/.ssh"
-
-   # Pre-populate known_hosts for common git providers
-   ssh-keyscan github.com gitlab.com >> "$USER_HOME/.ssh/known_hosts" 2>/dev/null || true
+   # Pre-populate system-wide known_hosts (not affected by ~/.ssh bind mount)
+   ssh-keyscan github.com gitlab.com >> /etc/ssh/ssh_known_hosts 2>/dev/null || true
    ```
 
-2. **SSH Configuration Pattern**:
+2. **System-Level SSH Configuration**:
    ```bash
+   # Write to /etc/ssh/ssh_config.d/ — survives ~/.ssh bind mount overlay
+   mkdir -p /etc/ssh/ssh_config.d
+   cat > /etc/ssh/ssh_config.d/90-devcontainer-git.conf << 'EOF'
    # accept-new: trust on first use, reject if host key changes (MITM protection)
-   cat > "$USER_HOME/.ssh/config" << 'EOF'
    Host github.com
        HostName github.com
        User git
@@ -360,6 +354,8 @@ features/<feature-name>/
        StrictHostKeyChecking accept-new
    EOF
    ```
+
+   **Why system-level?** The host `~/.ssh` directory is bind-mounted into the container at runtime, which overlays everything the feature wrote to `~/.ssh/` during build. System-level paths (`/etc/ssh/`) survive this overlay.
 
 3. **Utility Scripts Created**:
    - `/usr/local/bin/test-ssh-access` - Tests SSH connections to git providers
@@ -397,8 +393,8 @@ features/<feature-name>/
     }
   },
   "containerEnv": {
-    "EXTENSION_MANAGER_AUTO_SYNC": "${autoSync}",
-    "EXTENSION_MANAGER_WATCH_INTERVAL": "${watchInterval}"
+    "EXTENSION_MANAGER_AUTO_SYNC": "true",
+    "EXTENSION_MANAGER_WATCH_INTERVAL": "30"
   }
 }
 ```
@@ -457,20 +453,18 @@ features/<feature-name>/
 
 **install.sh Implementation Details**:
 
-1. **User Detection Pattern** (use in all features):
+1. **User Detection Pattern** (UID 1000, use in all features):
    ```bash
-   # Detect container user (customize list for your setup)
-   CONTAINER_USER=""
-   for user in developer youruser vscode; do
-       if id -u $user >/dev/null 2>&1; then
-           CONTAINER_USER="$user"
-           break
-       fi
-   done
-   
+   # Detect UID 1000 user (created by Dockerfile with host username via build.args)
+   CONTAINER_USER=$(getent passwd 1000 | cut -d: -f1)
    if [ -z "$CONTAINER_USER" ]; then
-       echo "❌ No suitable user found"
-       exit 1
+       # Fallback: check for vscode (base image default)
+       if id -u vscode >/dev/null 2>&1; then
+           CONTAINER_USER="vscode"
+       else
+           echo "❌ No suitable user found (no UID 1000 user, no vscode)"
+           exit 1
+       fi
    fi
    ```
 
@@ -504,12 +498,6 @@ features/<feature-name>/
 ### Lifecycle Scripts
 
 The lifecycle is split across three DevContainer hooks:
-
-#### setup-user.sh (postCreateCommand)
-
-**Purpose**: Renames the build-time `developer` user to match the host user via `${localEnv:USER}`.
-
-Features create `developer` at build time (feature options can't use `${localEnv:USER}`). This script renames at runtime so `whoami` matches the host user. Handles edge cases: user already exists, Codespaces `codespace` user, container restart.
 
 #### setup-environment.sh (postCreateCommand)
 
@@ -978,14 +966,10 @@ echo "Installing My New Feature..."
 # Get options (environment variables are UPPERCASE)
 ENABLE_OPTION=${ENABLEOPTION:-true}
 
-# User detection pattern (copy from existing features)
-CONTAINER_USER=""
-if id -u developer >/dev/null 2>&1; then
-    CONTAINER_USER="developer"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-else
-    echo "❌ No suitable user found"
+# Detect UID 1000 user (created by Dockerfile with host username via build.args)
+CONTAINER_USER=$(getent passwd 1000 | cut -d: -f1)
+if [ -z "$CONTAINER_USER" ]; then
+    echo "❌ No UID 1000 user found"
     exit 1
 fi
 
@@ -997,8 +981,8 @@ if [ "$ENABLE_OPTION" = "true" ]; then
     # Your installation commands
 fi
 
-# Set ownership
-chown -R "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.config/my-feature"
+# Set ownership (use $(id -gn) for group — GID 100 is 'users', not the username)
+chown -R "$CONTAINER_USER:$(id -gn $CONTAINER_USER)" "$USER_HOME/.config/my-feature"
 
 echo "✅ My New Feature installed successfully!"
 ```
