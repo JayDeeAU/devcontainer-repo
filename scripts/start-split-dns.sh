@@ -25,6 +25,18 @@ fi
 
 echo "🔀 Configuring split-DNS..."
 
+# Merge host's /etc/hosts entries into container's /etc/hosts
+# Host file is bind-mounted read-only at /etc/hosts.host; Docker manages
+# /etc/hosts (with container hostname already present)
+if [ -f /etc/hosts.host ]; then
+    while IFS= read -r line; do
+        # Skip comments, empty lines, and localhost/IPv6 boilerplate
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        [[ "$line" == 127.0.0.1* || "$line" == ::1* || "$line" == fe00:* || "$line" == ff0*:* ]] && continue
+        grep -qF "$line" /etc/hosts 2>/dev/null || echo "$line" | sudo tee -a /etc/hosts > /dev/null
+    done < /etc/hosts.host
+fi
+
 # Read Docker's resolv.conf before we overwrite it
 # Extract nameservers and search domains set by --dns and --dns-search
 NAMESERVERS=$(grep '^nameserver' /etc/resolv.conf | awk '{print $2}')

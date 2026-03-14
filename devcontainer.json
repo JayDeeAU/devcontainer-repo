@@ -120,6 +120,6 @@
     "source=${localEnv:HOME}/.ssh,target=/home/${localEnv:USER}/.ssh,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude,target=/home/${localEnv:USER}/.claude,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude.json,target=/home/${localEnv:USER}/.claude.json,type=bind,consistency=cached",
-    "source=/etc/hosts,target=/etc/hosts,type=bind,readonly"
+    "source=/etc/hosts,target=/etc/hosts.host,type=bind,readonly"
   ]
 }
