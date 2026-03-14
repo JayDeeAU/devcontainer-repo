@@ -56,7 +56,7 @@ fi
 # Ensure Claude config directory exists and has correct ownership
 echo "📁 Setting up Claude Code configuration directory..."
 mkdir -p "$USER_HOME/.claude"
-chown -R "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.claude"
+chown -R "$CONTAINER_USER:$(id -gn $CONTAINER_USER)" "$USER_HOME/.claude"
 
 # Create simple setup helper
 cat > /usr/local/bin/claude-setup << 'EOF'
@@ -101,7 +101,7 @@ alias cc-explain='claude "explain this code:"'
 alias cc-review='claude "review this code for bugs and improvements:"'
 EOF
     
-    chown "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.claude-code-aliases"
+    chown "$CONTAINER_USER:$(id -gn $CONTAINER_USER)" "$USER_HOME/.claude-code-aliases"
     
     # Add to shell RC files
     echo "" >> "$USER_HOME/.bashrc"

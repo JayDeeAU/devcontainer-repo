@@ -29,7 +29,7 @@ fi
 # Create SSH directory structure for target user
 echo "📁 Setting up SSH directory structure..."
 mkdir -p /home/$TARGET_USER/.ssh
-chown $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh
+chown $TARGET_USER:$(id -gn $TARGET_USER) /home/$TARGET_USER/.ssh
 chmod 700 /home/$TARGET_USER/.ssh
 
 # Pre-populate known_hosts for common git providers (build-phase, before host mount overlays)
@@ -58,7 +58,7 @@ Host *
     StrictHostKeyChecking accept-new
 EOF
 
-chown $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh/config
+chown $TARGET_USER:$(id -gn $TARGET_USER) /home/$TARGET_USER/.ssh/config
 chmod 600 /home/$TARGET_USER/.ssh/config
 
 # Create SSH test script for direct key usage
@@ -157,32 +157,30 @@ fi
 
 # Create post-create setup script
 echo "🚀 Creating post-create setup script..."
-cat > /usr/local/bin/ssh-post-create << EOF
+cat > /usr/local/bin/ssh-post-create << 'EOF'
 #!/bin/bash
-# Post-create SSH setup
+# Post-create SSH setup — uses runtime $CONTAINER_USER (set via containerEnv)
+
+RUNTIME_USER="${CONTAINER_USER:-developer}"
 
 echo "🔑 Post-create SSH setup..."
 
 # Fix permissions if SSH directory exists and is mounted
-if [ -d "/home/$TARGET_USER/.ssh" ]; then
+if [ -d "/home/$RUNTIME_USER/.ssh" ]; then
     echo "🔧 Fixing SSH permissions..."
-    chown -R $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh
-    chmod 700 /home/$TARGET_USER/.ssh
-    find /home/$TARGET_USER/.ssh -type f -exec chmod 600 {} \;
+    chown -R "$RUNTIME_USER:$(id -gn "$RUNTIME_USER")" "/home/$RUNTIME_USER/.ssh"
+    chmod 700 "/home/$RUNTIME_USER/.ssh"
+    find "/home/$RUNTIME_USER/.ssh" -type f -exec chmod 600 {} \;
 fi
 
-# Test connections if enabled
-if [ "$TEST_CONNECTIONS" = "true" ]; then
-    sudo -u $TARGET_USER test-ssh-access "$GIT_PROVIDERS"
-fi
+# Test connections
+test-ssh-access "github.com,gitlab.com"
 
-# Setup git user if not configured
-if [ "$SETUP_GIT_CONFIG" = "true" ]; then
-    if [ -z "\$(sudo -u $TARGET_USER git config --global user.name 2>/dev/null)" ]; then
-        echo "⚙️  Git user not configured. Run 'setup-git-user' to configure."
-    else
-        echo "✅ Git user already configured"
-    fi
+# Check git user configuration
+if [ -z "$(git config --global user.name 2>/dev/null)" ]; then
+    echo "⚙️  Git user not configured. Run 'setup-git-user' to configure."
+else
+    echo "✅ Git user already configured"
 fi
 
 echo "✅ SSH post-create setup complete"

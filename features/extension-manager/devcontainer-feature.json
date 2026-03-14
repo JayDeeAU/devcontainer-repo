@@ -21,7 +21,7 @@
     }
   },
   "containerEnv": {
-    "EXTENSION_MANAGER_AUTO_SYNC": "${autoSync}",
-    "EXTENSION_MANAGER_WATCH_INTERVAL": "${watchInterval}"
+    "EXTENSION_MANAGER_AUTO_SYNC": "true",
+    "EXTENSION_MANAGER_WATCH_INTERVAL": "30"
   }
 }

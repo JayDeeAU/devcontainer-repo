@@ -98,8 +98,11 @@ EOF
     chmod +x /usr/local/lib/extension-manager/auto-sync-daemon.sh
 fi
 
-# Set ownership for joe user
-chown -R ${USERNAME:-developer}:${USERNAME:-developer} /home/${USERNAME:-developer}/.extension-manager
+# Set ownership — use numeric GID since group name may differ (GID 100 = users per ADR-004)
+TARGET_USER="${USERNAME:-developer}"
+if id -u "$TARGET_USER" >/dev/null 2>&1; then
+    chown -R "$TARGET_USER:$(id -gn "$TARGET_USER")" /home/"$TARGET_USER"/.extension-manager
+fi
 
 echo "✅ Extension Manager installed successfully!"
 echo ""
