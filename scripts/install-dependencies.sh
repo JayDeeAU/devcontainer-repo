@@ -15,8 +15,8 @@ fi
 # Ensure Poetry is in PATH (it should be in /usr/local/bin from codemian-standards)
 export PATH="/usr/local/bin:/root/.local/bin:$HOME/.local/bin:$PATH"
 
-# Non-interactive mode — suppress pnpm/npm prompts (e.g. node_modules overwrite confirmation)
-export CI=true
+# Non-interactive mode — prevent pnpm/npm interactive prompts without suppressing progress output
+export npm_config_yes=true
 
 # Check if we're in a devcontainer template/feature repo (skip setup)
 if [ -d "features" ] && [ -d "templates" ] && [ -f "devcontainer.json" ]; then
