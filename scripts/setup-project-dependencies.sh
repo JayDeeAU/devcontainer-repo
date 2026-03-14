@@ -4,10 +4,12 @@
 
 set -e
 
-# Debug PATH and Poetry location
-echo "🔍 Debug: Current PATH: $PATH"
-echo "🔍 Debug: Looking for Poetry..."
-which poetry || echo "Poetry not found in PATH"
+# Debug PATH and Poetry location (gate behind DEBUG env var)
+if [ -n "$DEBUG" ]; then
+    echo "🔍 Debug: Current PATH: $PATH"
+    echo "🔍 Debug: Looking for Poetry..."
+    which poetry || echo "Poetry not found in PATH"
+fi
 
 # Ensure Poetry is in PATH (it should be in /usr/local/bin from codemian-standards)
 export PATH="/usr/local/bin:/root/.local/bin:$HOME/.local/bin:$PATH"

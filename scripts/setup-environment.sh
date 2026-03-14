@@ -9,7 +9,7 @@ echo "🚀 Setting up development environment..."
 # Setup dotfiles
 echo "🏠 Setting up dotfiles..."
 if [ ! -d ~/dotfiles ]; then
-    DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/yourorg/dotfiles.git}"
+    DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/JayDeeAU/dotfiles.git}"
     git clone "$DOTFILES_REPO" ~/dotfiles
     cd ~/dotfiles
     chmod +x ./dotbootstrap.sh
