@@ -7,6 +7,10 @@ set -e
 
 echo "🚀 Setting up development environment..."
 
+# Ensure ~/.zshrc exists before dotfiles bootstrap — zsh needs it,
+# and dotbootstrap's setup_shell_sources appends source lines to it
+touch ~/.zshrc
+
 # Setup dotfiles
 echo "🏠 Setting up dotfiles..."
 if [ ! -d ~/dotfiles ]; then
@@ -18,6 +22,16 @@ if [ ! -d ~/dotfiles ]; then
     cd -
 else
     echo "📁 Dotfiles directory already exists, skipping clone"
+fi
+
+# Verify .zshrc was populated — if bootstrap failed silently, re-run setup_shell_sources
+if [ -f ~/.zshrc ] && ! grep -q "zshrc-shared" ~/.zshrc 2>/dev/null; then
+    echo "⚠️ .zshrc missing dotfiles sources, re-running shell setup..."
+    if [ -f ~/dotfiles/scripts/common.sh ]; then
+        source ~/dotfiles/scripts/common.sh
+        setup_shell_sources ~/.zshrc
+        echo "✅ .zshrc sources restored"
+    fi
 fi
 
 # Validate infrastructure configuration (if present)

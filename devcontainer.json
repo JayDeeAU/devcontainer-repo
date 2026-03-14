@@ -14,8 +14,12 @@
     "--hostname",
     "devcontainer-${localWorkspaceFolderBasename}",
     "--dns",
-    "100.100.100.100"
-  ],  
+    "192.168.2.1",
+    "--dns",
+    "100.100.100.100",
+    "--dns-search",
+    "mule-mercat.ts.net"
+  ],
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
