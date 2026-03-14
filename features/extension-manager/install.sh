@@ -29,7 +29,7 @@ echo "🔗 Setting up extension manager commands..."
 cat > /usr/local/bin/sync-extensions << 'EOF'
 #!/bin/bash
 # Wrapper for extension sync script
-WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /workspaces/$(basename $PWD))}"
+WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /share/DevelopmentProjects/$(basename $PWD))}"
 SCRIPT_PATH="$WORKSPACE_ROOT/.devcontainer/scripts/sync-extensions.sh"
 if [ -f "$SCRIPT_PATH" ]; then
     "$SCRIPT_PATH" "$@"
@@ -43,7 +43,7 @@ EOF
 cat > /usr/local/bin/list-extensions << 'EOF'
 #!/bin/bash
 # Wrapper for extension list script
-WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /workspaces/$(basename $PWD))}"
+WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /share/DevelopmentProjects/$(basename $PWD))}"
 SCRIPT_PATH="$WORKSPACE_ROOT/.devcontainer/scripts/list-extensions.sh"
 if [ -f "$SCRIPT_PATH" ]; then
     "$SCRIPT_PATH" "$@"
@@ -57,7 +57,7 @@ EOF
 cat > /usr/local/bin/restore-extensions << 'EOF'
 #!/bin/bash
 # Wrapper for extension restore script
-WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /workspaces/$(basename $PWD))}"
+WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /share/DevelopmentProjects/$(basename $PWD))}"
 SCRIPT_PATH="$WORKSPACE_ROOT/.devcontainer/scripts/restore-extensions.sh"
 if [ -f "$SCRIPT_PATH" ]; then
     "$SCRIPT_PATH" "$@"
@@ -85,7 +85,7 @@ if [ "$AUTO_SYNC" = "true" ]; then
 # Auto-sync daemon wrapper
 
 WATCH_INTERVAL=${EXTENSION_MANAGER_WATCH_INTERVAL:-30}
-WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /workspaces/$(basename $PWD))}"
+WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /share/DevelopmentProjects/$(basename $PWD))}"
 SCRIPT_PATH="$WORKSPACE_ROOT/.devcontainer/scripts/sync-extensions.sh"
 
 echo "🤖 Extension auto-sync daemon started (interval: ${WATCH_INTERVAL}s)"

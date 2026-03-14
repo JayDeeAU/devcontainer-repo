@@ -407,7 +407,7 @@ features/<feature-name>/
    ```bash
    cat > /usr/local/bin/sync-extensions << 'EOF'
    #!/bin/bash
-   WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /workspaces/$(basename $PWD))}"
+   WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /share/DevelopmentProjects/$(basename $PWD))}"
    SCRIPT_PATH="$WORKSPACE_ROOT/.devcontainer/scripts/sync-extensions.sh"
    if [ -f "$SCRIPT_PATH" ]; then
        "$SCRIPT_PATH" "$@"

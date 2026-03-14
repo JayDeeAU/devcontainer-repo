@@ -25,7 +25,7 @@ Worktrees in this setup are **temporary investigation spaces**, not development 
 ## Directory Structure
 
 ```
-/workspaces/
+/share/DevelopmentProjects/
 ├── your-project/              # Main workspace
 │   ├── .git/                  # Git repository
 │   ├── backend/
@@ -67,7 +67,7 @@ This command:
 If you need to create worktrees manually:
 
 ```bash
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 
 # Production worktree (tracking main)
 git worktree add --detach ../your-project-production main
@@ -122,7 +122,7 @@ cd ../your-project-production
 env-prod --debug --sync
 
 # Option C: Delete and recreate fresh
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 rm -rf ../your-project-production
 ```
 
@@ -146,7 +146,7 @@ cd ../your-project-staging
 
 ```bash
 # Main workspace: develop feature
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 git checkout feature/new-feature
 env-local
 
@@ -189,7 +189,7 @@ env-staging --debug --sync # Alternative form
 ### Deletion
 ```bash
 # Manual deletion
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 rm -rf ../your-project-production
 rm -rf ../your-project-staging
 
@@ -391,7 +391,7 @@ If you want to keep useful debug code:
 
 ```bash
 # 1. Copy from worktree to main workspace
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 cp ../your-project-production/backend/debug_utils.py ./backend/
 
 # 2. Commit in main workspace
@@ -414,7 +414,7 @@ cd docker
 docker-compose -f docker-compose.custom.yml up
 
 # Clean up when done
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 git worktree remove ../your-project-hotfix
 ```
 
@@ -477,7 +477,7 @@ Each worktree contains:
 
 ```bash
 # Regular cleanup (weekly/monthly)
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 
 # Remove unused worktrees
 rm -rf ../your-project-production

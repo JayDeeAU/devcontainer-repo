@@ -257,7 +257,7 @@ env-prod-sync            # Pull latest from origin/main (shortcut)
 env-prod-debug --sync    # Pull latest from origin/main (alternative)
 
 # Implement fix separately
-cd /workspaces/projectname  # Return to main workspace
+cd /share/DevelopmentProjects/projectname  # Return to main workspace
 ghfs 1.2.4              # Create proper hotfix in local env
 vim backend/api/file.py  # Implement fix
 ghff 1.2.4              # Deploy fix to production
@@ -518,7 +518,7 @@ gp origin --delete problem-branch  # Clean remote
 env-prod-debug          # Source access via worktree
 cd ../projectname-production  # Navigate to worktree
 # Investigate issue, add debug prints
-cd /workspaces/projectname && env-prod  # Return to normal
+cd /share/DevelopmentProjects/projectname && env-prod  # Return to normal
 ghfs 1.2.X              # Implement fix properly in local
 ```
 

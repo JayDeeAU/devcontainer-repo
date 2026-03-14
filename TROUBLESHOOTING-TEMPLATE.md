@@ -224,7 +224,7 @@ Worktrees are created on-demand but haven't been set up yet.
 ucm setup-worktrees
 
 # Verify creation
-ls -la /workspaces/
+ls -la /share/DevelopmentProjects/
 # Should see: your-project-production/ and your-project-staging/
 
 # Try debug mode again
@@ -233,7 +233,7 @@ env-prod --debug
 
 **Manual Creation (Alternative):**
 ```bash
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 
 # Production worktree
 git worktree add --detach ../your-project-production main
@@ -478,7 +478,7 @@ echo $VARIABLE_NAME
 
 **1. Check Worktree Status**
 ```bash
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 git worktree list
 ```
 
@@ -618,11 +618,11 @@ cp .vscode/launch.json.backup .vscode/launch.json
 
 ```bash
 # Remove all worktrees
-rm -rf /workspaces/your-project-production
-rm -rf /workspaces/your-project-staging
+rm -rf /share/DevelopmentProjects/your-project-production
+rm -rf /share/DevelopmentProjects/your-project-staging
 
 # Prune git references
-cd /workspaces/your-project
+cd /share/DevelopmentProjects/your-project
 git worktree prune
 
 # Recreate fresh

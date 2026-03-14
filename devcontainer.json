@@ -1,5 +1,7 @@
 {
   "name": "Modern Python + Next.js Development Environment",
+  "workspaceFolder": "/share/DevelopmentProjects/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=/share/DevelopmentProjects,target=/share/DevelopmentProjects,type=bind,consistency=cached",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
