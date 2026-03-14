@@ -90,15 +90,6 @@ if [ "${INSTALLDEVTOOLS}" = "true" ]; then
         zsh
 fi
 
-# Set zsh as default shell for the target user
-# common-utils with username:"none" installs zsh but skips chsh,
-# leaving the login shell as /bin/bash — terminals then open zsh as a
-# non-login subprocess and .zshrc doesn't get sourced reliably
-if command -v zsh >/dev/null 2>&1; then
-    echo "Setting zsh as default shell for $TARGET_USER..."
-    chsh -s "$(which zsh)" "$TARGET_USER"
-fi
-
 # Create Python symlinks to match host paths for shared venv compatibility
 # Host uses /usr/bin/pythonX.Y (apt), container has /usr/local/bin (devcontainer image)
 # This allows a single .venv to work in both environments
