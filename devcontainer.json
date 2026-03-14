@@ -78,10 +78,24 @@
 
   "containerEnv": {
     "CONTAINER_USER": "${localEnv:USER}",
-    "DOTFILES_REPO": "https://github.com/JayDeeAU/dotfiles.git"
+    "DOTFILES_REPO": "https://github.com/JayDeeAU/dotfiles.git",
+    "DEVCONTAINER_WORKSPACE": "${containerWorkspaceFolder}"
   },
 
-  "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
+  "updateContentCommand": "chmod +x .devcontainer/scripts/install-dependencies.sh && .devcontainer/scripts/install-dependencies.sh",
+  "postCreateCommand": {
+    "user-setup": "chmod +x .devcontainer/scripts/setup-user.sh && sudo .devcontainer/scripts/setup-user.sh",
+    "dotfiles": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
+    "vscode": "mkdir -p .vscode && [ -f .devcontainer/tasks.json ] && cp .devcontainer/tasks.json .vscode/tasks.json || true",
+    "renders": "[ -x claude-base/base-init.sh ] && claude-base/base-init.sh --refresh || true"
+  },
+  "postStartCommand": "docker context use default 2>/dev/null || true",
+
+  "portsAttributes": {
+    "8800": { "label": "Frontend", "onAutoForward": "notify" },
+    "8810": { "label": "Backend API", "onAutoForward": "notify" },
+    "8830": { "label": "Redis", "onAutoForward": "ignore" }
+  },
 
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",

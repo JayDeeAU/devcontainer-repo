@@ -767,7 +767,7 @@
     {
       "label": "Maintenance: Update Project Dependencies",
       "type": "shell",
-      "command": ".devcontainer/scripts/setup-project-dependencies.sh",
+      "command": ".devcontainer/scripts/install-dependencies.sh",
       "group": "build",
       "presentation": {
         "echo": true,
