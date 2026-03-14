@@ -71,18 +71,17 @@
     }
   },
   
-  "remoteUser": "${localEnv:USER}",
-  "containerUser": "${localEnv:USER}",
+  "remoteUser": "developer",
+  "containerUser": "developer",
 
   "containerEnv": {
-    "CONTAINER_USER": "${localEnv:USER}",
+    "HOST_USER": "${localEnv:USER}",
     "DOTFILES_REPO": "https://github.com/JayDeeAU/dotfiles.git",
     "DEVCONTAINER_WORKSPACE": "${containerWorkspaceFolder}"
   },
 
   "updateContentCommand": "chmod +x .devcontainer/scripts/install-dependencies.sh && .devcontainer/scripts/install-dependencies.sh",
   "postCreateCommand": {
-    "user-setup": "chmod +x .devcontainer/scripts/setup-user.sh && sudo .devcontainer/scripts/setup-user.sh",
     "dotfiles": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
     "vscode": "mkdir -p .vscode && [ -f .devcontainer/tasks.json ] && cp .devcontainer/tasks.json .vscode/tasks.json || true",
     "renders": "[ -x claude-base/base-init.sh ] && claude-base/base-init.sh --refresh || true"
@@ -97,7 +96,7 @@
 
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=${localEnv:HOME}/.ssh,target=/home/${localEnv:USER}/.ssh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/${localEnv:USER}/.claude,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.ssh,target=/home/developer/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached"
   ]
 }
