@@ -49,6 +49,9 @@ echo "📦 Using Node $(node --version), npm $(npm --version)"
 if [ "$INSTALL_LATEST" = "true" ]; then
     echo "📦 Installing Claude Code CLI..."
     npm install -g @anthropic-ai/claude-code
+
+    echo "📦 Installing MCP servers..."
+    npm install -g @modelcontextprotocol/server-memory
 fi
 
 # Ensure Claude config directory exists and has correct ownership
