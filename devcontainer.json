@@ -9,10 +9,12 @@
     }
   },
   "runArgs": [
-    "--name", 
+    "--name",
     "devcontainer_${localWorkspaceFolderBasename}",
-    "--hostname", 
-    "devcontainer-${localWorkspaceFolderBasename}"
+    "--hostname",
+    "devcontainer-${localWorkspaceFolderBasename}",
+    "--dns",
+    "100.100.100.100"
   ],  
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
@@ -103,6 +105,8 @@
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
     "source=${localEnv:HOME}/.ssh,target=/home/${localEnv:USER}/.ssh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/${localEnv:USER}/.claude,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.claude,target=/home/${localEnv:USER}/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude.json,target=/home/${localEnv:USER}/.claude.json,type=bind,consistency=cached",
+    "source=/etc/hosts,target=/etc/hosts,type=bind,readonly"
   ]
 }
