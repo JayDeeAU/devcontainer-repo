@@ -24,7 +24,7 @@ This is a **universal devcontainer** — the same code is cloned into every proj
 - Base image (`mcr.microsoft.com/devcontainers/python:3.12-bookworm`)
 - External features (node, poetry, pnpm, docker-outside-of-docker, github-cli)
 - Custom features (`features/codemian-standards`, `features/host-ssh-access`, `features/extension-manager`, `features/claude-code`)
-- Lifecycle scripts (`setup-environment.sh`, `setup-project-dependencies.sh`)
+- Lifecycle scripts (`setup-environment.sh`, `install-dependencies.sh`, `setup-user.sh`)
 - VS Code extensions list and settings defaults
 
 **Per-project** — NOT in this repo:
@@ -174,26 +174,32 @@ Changes to these affect the container build, not just a single feature. Test tho
 
 ## Script System
 
-The lifecycle flow during `postCreateCommand`:
+The lifecycle flow across DevContainer hooks:
 
 ```
-devcontainer.json (postCreateCommand)
-  └→ setup-environment.sh
-       ├→ Clone ~/dotfiles + run dotbootstrap.sh (if not present)
-       ├→ Copy tasks.json to .vscode/
-       ├→ setup-project-dependencies.sh
-       │    ├→ Skip if devcontainer repo itself (features/ + templates/ detected)
-       │    ├→ Poetry install (if pyproject.toml found)
-       │    ├→ pnpm install (if package.json found)
-       │    └→ Auto-detect monorepo subdirs (frontend/, backend/, api/, web/, server/)
-       ├→ claude-base/base-init.sh --refresh (if present, non-blocking)
-       ├→ infra-base/scripts/infra-init.sh --validate (if present, non-blocking)
-       └→ docker context use default
+devcontainer.json (updateContentCommand)
+  └→ install-dependencies.sh
+       ├→ Skip if devcontainer repo itself (features/ + templates/ detected)
+       ├→ Poetry install (if pyproject.toml found)
+       ├→ pnpm install (if package.json found)
+       └→ Auto-detect monorepo subdirs (frontend/, backend/, api/, web/, server/)
+
+devcontainer.json (postCreateCommand) — runs once after container creation
+  ├→ user-setup: setup-user.sh (rename developer → host user via $CONTAINER_USER)
+  ├→ dotfiles: setup-environment.sh
+  │    ├→ Clone ~/dotfiles + run dotbootstrap.sh (if not present)
+  │    └→ infra-base/scripts/infra-init.sh --validate (if present, non-blocking)
+  ├→ vscode: Copy tasks.json to .vscode/
+  └→ renders: claude-base/base-init.sh --refresh (if present, non-blocking)
+
+devcontainer.json (postStartCommand) — runs every container start
+  └→ docker context use default
 ```
 
 **DevContainer lifecycle hooks** (from the [spec](https://containers.dev/implementors/json_reference/)):
-- `postCreateCommand` (what we use): Runs once after container creation. Used for dotfiles, dependencies, and governance rendering.
-- `postStartCommand`: Runs every time the container starts. Not currently used.
+- `updateContentCommand`: Re-runs on source changes (Codespaces prebuilds). Used for dependency installation.
+- `postCreateCommand` (object syntax): Runs once after container creation. Parallel tasks for user setup, dotfiles, vscode config, and governance rendering.
+- `postStartCommand`: Runs every time the container starts. Used for docker context reset.
 - `postAttachCommand`: Runs every time a client attaches. Not currently used.
 
 ---

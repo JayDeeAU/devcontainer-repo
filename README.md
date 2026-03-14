@@ -2,7 +2,7 @@
 doc_type: "guide"
 doc_lifecycle: "living"
 created: "2026-02-15"
-last_modified: "2026-03-08"
+last_modified: "2026-03-14"
 owner: "cicd-engineer"
 status: "ACTIVE"
 review_frequency: "quarterly"
@@ -96,8 +96,9 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 │   ├── extension-manager/         # ✅ VS Code extension sync
 │   └── claude-code/              # ✅ AI assistance integration
 └── scripts/                       # Environment and project setup
-    ├── setup-environment.sh       # Main post-create setup
-    ├── setup-project-dependencies.sh
+    ├── setup-environment.sh       # Dotfiles + infra validation (postCreateCommand)
+    ├── setup-user.sh              # Runtime user rename (postCreateCommand)
+    ├── install-dependencies.sh    # Re-runnable deps (updateContentCommand)
     ├── config-generator.sh        # Project config generator
     ├── sync-extensions.sh         # Extension sync
     ├── list-extensions.sh         # Extension status report
@@ -126,7 +127,7 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
     "installOhMyZsh": false,           // Disabled for performance
     "username": "developer",           // Custom user (change to your preferred username)
     "userUid": "1000",
-    "userGid": "1000",
+    "userGid": "100",
     "upgradePackages": true,
     "nonFreePackages": false
   },
@@ -135,7 +136,6 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
     "nodeGypDependencies": true
   },
   "ghcr.io/devcontainers-extra/features/poetry:2": {},
-  "ghcr.io/devcontainers-extra/features/pnpm:2": {},
   "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
     "enableNonRootDocker": true,
     "moby": false                      // Use host Docker, not Moby
@@ -167,14 +167,21 @@ The architecture uses DevContainer's **feature system** instead of monolithic Do
 ```json
 "mounts": [
   "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-  "source=${localEnv:HOME}/.ssh,target=/home/developer/.ssh,type=bind,consistency=cached",
-  "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached"
+  "source=${localEnv:HOME}/.ssh,target=/home/${localEnv:USER}/.ssh,type=bind,consistency=cached",
+  "source=${localEnv:HOME}/.claude,target=/home/${localEnv:USER}/.claude,type=bind,consistency=cached"
 ]
 ```
 
 #### Lifecycle Automation
 ```json
-"postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh"
+"updateContentCommand": "chmod +x .devcontainer/scripts/install-dependencies.sh && .devcontainer/scripts/install-dependencies.sh",
+"postCreateCommand": {
+  "user-setup": "chmod +x .devcontainer/scripts/setup-user.sh && sudo .devcontainer/scripts/setup-user.sh",
+  "dotfiles": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
+  "vscode": "mkdir -p .vscode && [ -f .devcontainer/tasks.json ] && cp .devcontainer/tasks.json .vscode/tasks.json || true",
+  "renders": "[ -x claude-base/base-init.sh ] && claude-base/base-init.sh --refresh || true"
+},
+"postStartCommand": "docker context use default 2>/dev/null || true"
 ```
 
 ---
@@ -238,11 +245,11 @@ features/<feature-name>/
        userdel -r vscode 2>/dev/null || true
    fi
    
-   # Create custom user with correct UID/GID (customize username as needed)
+   # Create custom user with correct UID 1000:GID 100 (ADR-004: NFS-compatible users group)
    CONTAINER_USER="youruser"  # Change this to your preferred username
    if ! id -u $CONTAINER_USER >/dev/null 2>&1; then
-       groupadd -g 1000 $CONTAINER_USER
-       useradd -u 1000 -g 1000 -m -s /bin/bash $CONTAINER_USER
+       getent group 100 >/dev/null || groupadd -g 100 users
+       useradd -u 1000 -g 100 -m -s /bin/bash $CONTAINER_USER
        usermod -aG sudo $CONTAINER_USER
        echo "$CONTAINER_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$CONTAINER_USER
    fi
@@ -313,7 +320,7 @@ features/<feature-name>/
     }
   },
   "containerEnv": {
-    "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
+    "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=accept-new"
   }
 }
 ```
@@ -328,24 +335,29 @@ features/<feature-name>/
    mkdir -p "$USER_HOME/.ssh"
    chown "$CONTAINER_USER:$CONTAINER_USER" "$USER_HOME/.ssh"
    chmod 700 "$USER_HOME/.ssh"
+
+   # Pre-populate known_hosts for common git providers
+   ssh-keyscan github.com gitlab.com >> "$USER_HOME/.ssh/known_hosts" 2>/dev/null || true
    ```
 
 2. **SSH Configuration Pattern**:
    ```bash
+   # accept-new: trust on first use, reject if host key changes (MITM protection)
    cat > "$USER_HOME/.ssh/config" << 'EOF'
    Host github.com
        HostName github.com
        User git
        IdentitiesOnly yes
-       StrictHostKeyChecking no
-       UserKnownHostsFile /dev/null
-   
+       StrictHostKeyChecking accept-new
+
    Host gitlab.com
        HostName gitlab.com
        User git
        IdentitiesOnly yes
-       StrictHostKeyChecking no
-       UserKnownHostsFile /dev/null
+       StrictHostKeyChecking accept-new
+
+   Host *
+       StrictHostKeyChecking accept-new
    EOF
    ```
 
@@ -399,7 +411,8 @@ features/<feature-name>/
    ```bash
    cat > /usr/local/bin/sync-extensions << 'EOF'
    #!/bin/bash
-   SCRIPT_PATH="/workspaces/$(basename $PWD)/.devcontainer/scripts/sync-extensions.sh"
+   WORKSPACE_ROOT="${DEVCONTAINER_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || echo /workspaces/$(basename $PWD))}"
+   SCRIPT_PATH="$WORKSPACE_ROOT/.devcontainer/scripts/sync-extensions.sh"
    if [ -f "$SCRIPT_PATH" ]; then
        "$SCRIPT_PATH" "$@"
    else
@@ -488,73 +501,53 @@ features/<feature-name>/
 
 ## Script System Analysis
 
-### Main Environment Setup Script
+### Lifecycle Scripts
 
-#### setup-environment.sh
+The lifecycle is split across three DevContainer hooks:
 
-**Purpose**: Main post-create initialization script run by `postCreateCommand`
+#### setup-user.sh (postCreateCommand)
 
-**Implementation Pattern**:
+**Purpose**: Renames the build-time `developer` user to match the host user via `${localEnv:USER}`.
+
+Features create `developer` at build time (feature options can't use `${localEnv:USER}`). This script renames at runtime so `whoami` matches the host user. Handles edge cases: user already exists, Codespaces `codespace` user, container restart.
+
+#### setup-environment.sh (postCreateCommand)
+
+**Purpose**: One-time dotfiles clone and infra-base validation.
+
 ```bash
-#!/usr/bin/env bash
-set -e
-
-echo "🚀 Setting up development environment..."
-
-# 1. Setup dotfiles (customize repository URL)
-echo "🏠 Setting up dotfiles..."
-DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/yourorg/dotfiles.git}"
+# Clone dotfiles (URL from containerEnv DOTFILES_REPO)
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/JayDeeAU/dotfiles.git}"
 if [ ! -d ~/dotfiles ]; then
-    git clone $DOTFILES_REPO ~/dotfiles
-    cd ~/dotfiles
-    chmod +x ./dotbootstrap.sh
-    ./dotbootstrap.sh || echo "⚠️ Dotfiles setup failed, continuing..."
-    cd -
-else
-    echo "📁 Dotfiles directory already exists, skipping clone"
+    git clone "$DOTFILES_REPO" ~/dotfiles
+    cd ~/dotfiles && ./dotbootstrap.sh && cd -
 fi
 
-# 2. Setup project dependencies
-echo "📦 Setting up project dependencies..."
-chmod +x .devcontainer/scripts/setup-project-dependencies.sh
-.devcontainer/scripts/setup-project-dependencies.sh
-
-# 3. Set docker context
-echo "🐳 Setting docker context..."
-docker context use default
-
-echo "✅ Environment setup completed"
+# Validate infrastructure configuration (if present)
+if [ -x "infra-base/scripts/infra-init.sh" ]; then
+    infra-base/scripts/infra-init.sh --validate || echo "⚠️ ..."
+fi
 ```
 
-#### setup-project-dependencies.sh
+#### install-dependencies.sh (updateContentCommand)
 
-**Purpose**: Intelligent project type detection and dependency installation
+**Purpose**: Re-runnable dependency installation. Runs on container create AND when source changes (Codespaces prebuilds).
 
-**Detection Logic**:
 ```bash
-# Skip if this is a devcontainer repository itself
-if [ -d "features" ] && [ -d "templates" ] && [ -f "devcontainer.json" ]; then
-    echo "🏗️ Detected devcontainer repository structure - skipping project dependency setup"
-    exit 0
-fi
-
 # Poetry project detection
 if [ -f "pyproject.toml" ]; then
-    echo "🐍 Setting up Poetry project..."
     poetry config virtualenvs.in-project true
     poetry install
 fi
 
-# Node.js project detection  
+# Node.js project detection
 if [ -f "package.json" ] && [[ "$PWD" != *"node_modules"* ]]; then
-    echo "📦 Setting up pnpm project..."
     pnpm install
 fi
 
 # Monorepo structure detection
 for dir in frontend backend api web server; do
     if [ -d "$dir" ]; then
-        echo "📁 Found $dir directory, checking for dependencies..."
         # Check for pyproject.toml or package.json in subdirectories
     fi
 done
@@ -1108,7 +1101,7 @@ When deploying to a new organization:
 
 1. **Feature Names**: Rename `organizational-standards` to match your org
 2. **User Configuration**: Update default username pattern in features
-3. **Dotfiles Repository**: Update `DOTFILES_REPO` URL in setup-environment.sh
+3. **Dotfiles Repository**: Update `DOTFILES_REPO` in `containerEnv` (devcontainer.json) or setup-environment.sh fallback
 4. **Templates**: Customize `.devcontainer/templates/` for common project types
 5. **Port Ranges**: Adjust port assignments in ucm.sh if needed
 
