@@ -12,9 +12,7 @@
       "installZsh": true,
       "configureZshAsDefaultShell": true,
       "installOhMyZsh": false,
-      "username": "developer",
-      "userUid": "1000",
-      "userGid": "100",
+      "username": "none",
       "upgradePackages": true,
       "nonFreePackages": false
     },
