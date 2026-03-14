@@ -21,8 +21,9 @@ fi
 TARGET_USER="${USERNAME:-developer}"
 if ! id -u "$TARGET_USER" >/dev/null 2>&1; then
     echo "⚠️  Creating $TARGET_USER user..."
-    groupadd -g 1000 "$TARGET_USER"
-    useradd -u 1000 -g 1000 -m -s /bin/bash "$TARGET_USER"
+    # GID 100 (users) per ADR-004 — already exists on Debian bookworm
+    getent group 100 >/dev/null || groupadd -g 100 users
+    useradd -u 1000 -g 100 -m -s /bin/bash "$TARGET_USER"
 fi
 
 # Create SSH directory structure for target user

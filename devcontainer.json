@@ -14,7 +14,7 @@
       "installOhMyZsh": false,
       "username": "developer",
       "userUid": "1000",
-      "userGid": "1000",
+      "userGid": "100",
       "upgradePackages": true,
       "nonFreePackages": false
     },
@@ -74,18 +74,18 @@
     }
   },
   
-  "remoteUser": "developer",
-  "containerUser": "developer",
-  
+  "remoteUser": "${localEnv:USER}",
+  "containerUser": "${localEnv:USER}",
+
+  "containerEnv": {
+    "CONTAINER_USER": "${localEnv:USER}"
+  },
+
   "postCreateCommand": "chmod +x .devcontainer/scripts/setup-environment.sh && .devcontainer/scripts/setup-environment.sh",
-  
+
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=${localEnv:HOME}/.ssh,target=/home/developer/.ssh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/developer/.claude,type=bind,consistency=cached"
-  ],
-  
-  "remoteEnv": {
-    "GIT_SSH_COMMAND": "ssh -o StrictHostKeyChecking=no"
-  }
+    "source=${localEnv:HOME}/.ssh,target=/home/${localEnv:USER}/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/${localEnv:USER}/.claude,type=bind,consistency=cached"
+  ]
 }

@@ -31,11 +31,12 @@ if getent group vscode >/dev/null 2>&1; then
 fi
 
 TARGET_USER="${USERNAME:-developer}"
-# Ensure target user exists with correct UID/GID
+# Ensure target user exists with correct UID 1000:GID 100 (ADR-004: NFS-compatible users group)
 if ! id -u "$TARGET_USER" >/dev/null 2>&1; then
-    echo "Creating $TARGET_USER user with UID/GID 1000..."
-    groupadd -g 1000 "$TARGET_USER"
-    useradd -u 1000 -g 1000 -m -s /bin/bash "$TARGET_USER"
+    echo "Creating $TARGET_USER user with UID 1000:GID 100 (users)..."
+    # GID 100 (users) already exists on Debian bookworm — only create if missing
+    getent group 100 >/dev/null || groupadd -g 100 users
+    useradd -u 1000 -g 100 -m -s /bin/bash "$TARGET_USER"
     usermod -aG sudo "$TARGET_USER"
     echo "$TARGET_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"$TARGET_USER"
 fi
