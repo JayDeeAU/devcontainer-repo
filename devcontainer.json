@@ -104,7 +104,10 @@
     "vscode": "mkdir -p .vscode && [ -f .devcontainer/tasks.json ] && cp .devcontainer/tasks.json .vscode/tasks.json || true",
     "renders": "[ -x claude-base/base-init.sh ] && claude-base/base-init.sh --refresh || true"
   },
-  "postStartCommand": "docker context use default 2>/dev/null || true",
+  "postStartCommand": {
+    "docker": "docker context use default 2>/dev/null || true",
+    "split-dns": "chmod +x .devcontainer/scripts/start-split-dns.sh && .devcontainer/scripts/start-split-dns.sh"
+  },
 
   "portsAttributes": {
     "8800": { "label": "Frontend", "onAutoForward": "notify" },
