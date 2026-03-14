@@ -30,15 +30,18 @@ if getent group vscode >/dev/null 2>&1; then
     groupdel vscode 2>/dev/null || true
 fi
 
-TARGET_USER="${USERNAME:-developer}"
-# Ensure target user exists with correct UID 1000:GID 100 (ADR-004: NFS-compatible users group)
-if ! id -u "$TARGET_USER" >/dev/null 2>&1; then
+# Detect UID 1000 user (created by Dockerfile with host username via build.args)
+TARGET_USER=$(getent passwd 1000 | cut -d: -f1)
+if [ -z "$TARGET_USER" ]; then
+    # Fallback: create developer if no UID 1000 user exists (e.g., standalone feature test)
+    TARGET_USER="developer"
     echo "Creating $TARGET_USER user with UID 1000:GID 100 (users)..."
-    # GID 100 (users) already exists on Debian bookworm — only create if missing
     getent group 100 >/dev/null || groupadd -g 100 users
     useradd -u 1000 -g 100 -m -s /bin/bash "$TARGET_USER"
     usermod -aG sudo "$TARGET_USER"
     echo "$TARGET_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"$TARGET_USER"
+else
+    echo "Found UID 1000 user: $TARGET_USER"
 fi
 
 # Install fonts if requested (from original Dockerfile)

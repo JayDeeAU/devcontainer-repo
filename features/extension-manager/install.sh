@@ -14,8 +14,12 @@ BACKUP_EXTENSIONS=${BACKUPEXTENSIONS:-true}
 # Install required tools
 apt-get update && apt-get install -y jq inotify-tools
 
+# Detect UID 1000 user (created by Dockerfile with host username via build.args)
+TARGET_USER=$(getent passwd 1000 | cut -d: -f1)
+TARGET_USER="${TARGET_USER:-developer}"
+
 # Create extension manager directory for user data
-mkdir -p /home/${USERNAME:-developer}/.extension-manager
+mkdir -p /home/$TARGET_USER/.extension-manager
 
 # Create symbolic links to scripts in devcontainer scripts directory
 # The actual scripts will be maintained in .devcontainer/scripts/
@@ -98,8 +102,7 @@ EOF
     chmod +x /usr/local/lib/extension-manager/auto-sync-daemon.sh
 fi
 
-# Set ownership — use numeric GID since group name may differ (GID 100 = users per ADR-004)
-TARGET_USER="${USERNAME:-developer}"
+# Set ownership
 if id -u "$TARGET_USER" >/dev/null 2>&1; then
     chown -R "$TARGET_USER:$(id -gn "$TARGET_USER")" /home/"$TARGET_USER"/.extension-manager
 fi

@@ -19,7 +19,6 @@
     }
   },
   "containerEnv": {
-    "CLAUDE_CODE_INSTALLED": "true",
-    "CLAUDE_CODE_CONFIG_DIR": "/home/developer/.config/claude-code"
+    "CLAUDE_CODE_INSTALLED": "true"
   }
 }

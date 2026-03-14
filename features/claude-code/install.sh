@@ -10,20 +10,18 @@ echo "🤖 Installing Claude Code AI Assistant..."
 INSTALL_LATEST=${INSTALLLATEST:-true}
 CREATE_ALIASES=${CREATEALIASES:-true}
 
-# Handle user situation - could be vscode or joe depending on feature order
-CONTAINER_USER=""
-TARGET_USER="${USERNAME:-developer}"
-if id -u "$TARGET_USER" >/dev/null 2>&1; then
-    CONTAINER_USER="$TARGET_USER"
-    echo "✅ Found $TARGET_USER user (UID: $(id -u "$TARGET_USER"), GID: $(id -g "$TARGET_USER"))"
-elif id -u vscode >/dev/null 2>&1; then
-    CONTAINER_USER="vscode"
-    echo "✅ Found vscode user (UID: $(id -u vscode), GID: $(id -g vscode))"
-    echo "💡 Note: Using vscode user - $TARGET_USER user will be created later by common-utils"
-else
-    echo "❌ No suitable user found (neither $TARGET_USER nor vscode)"
-    exit 1
+# Detect UID 1000 user (created by Dockerfile with host username via build.args)
+CONTAINER_USER=$(getent passwd 1000 | cut -d: -f1)
+if [ -z "$CONTAINER_USER" ]; then
+    # Fallback: check for vscode (base image default)
+    if id -u vscode >/dev/null 2>&1; then
+        CONTAINER_USER="vscode"
+    else
+        echo "❌ No suitable user found (no UID 1000 user, no vscode)"
+        exit 1
+    fi
 fi
+echo "✅ Found container user: $CONTAINER_USER (UID: $(id -u "$CONTAINER_USER"), GID: $(id -g "$CONTAINER_USER"))"
 
 USER_HOME="/home/$CONTAINER_USER"
 

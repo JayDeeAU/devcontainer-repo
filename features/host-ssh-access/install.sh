@@ -18,12 +18,15 @@ if ! command -v ssh &> /dev/null; then
 fi
 
 # Ensure target user has proper setup
-TARGET_USER="${USERNAME:-developer}"
-if ! id -u "$TARGET_USER" >/dev/null 2>&1; then
-    echo "⚠️  Creating $TARGET_USER user..."
-    # GID 100 (users) per ADR-004 — already exists on Debian bookworm
+# Detect UID 1000 user (created by Dockerfile with host username via build.args)
+TARGET_USER=$(getent passwd 1000 | cut -d: -f1)
+if [ -z "$TARGET_USER" ]; then
+    TARGET_USER="developer"
+    echo "⚠️  No UID 1000 user found, creating $TARGET_USER..."
     getent group 100 >/dev/null || groupadd -g 100 users
     useradd -u 1000 -g 100 -m -s /bin/bash "$TARGET_USER"
+else
+    echo "Found UID 1000 user: $TARGET_USER"
 fi
 
 # Create SSH directory structure for target user
@@ -159,9 +162,10 @@ fi
 echo "🚀 Creating post-create setup script..."
 cat > /usr/local/bin/ssh-post-create << 'EOF'
 #!/bin/bash
-# Post-create SSH setup — uses runtime $CONTAINER_USER (set via containerEnv)
+# Post-create SSH setup — detects container user by UID 1000
 
-RUNTIME_USER="${CONTAINER_USER:-developer}"
+RUNTIME_USER=$(getent passwd 1000 | cut -d: -f1)
+RUNTIME_USER="${RUNTIME_USER:-developer}"
 
 echo "🔑 Post-create SSH setup..."
 
