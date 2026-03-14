@@ -32,28 +32,30 @@ mkdir -p /home/$TARGET_USER/.ssh
 chown $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh
 chmod 700 /home/$TARGET_USER/.ssh
 
+# Pre-populate known_hosts for common git providers (build-phase, before host mount overlays)
+echo "🔑 Pre-populating known_hosts for git providers..."
+ssh-keyscan github.com gitlab.com >> /home/$TARGET_USER/.ssh/known_hosts 2>/dev/null || true
+
 # Create SSH config for common git providers
 echo "⚙️  Creating SSH config..."
 cat > /home/$TARGET_USER/.ssh/config << 'EOF'
 # SSH config for git providers
+# accept-new: trust on first use, reject if host key changes (MITM protection)
 Host github.com
     HostName github.com
     User git
     IdentitiesOnly yes
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking accept-new
 
 Host gitlab.com
     HostName gitlab.com
     User git
     IdentitiesOnly yes
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking accept-new
 
-# Fallback for any git SSH
+# Fallback for any SSH host
 Host *
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking accept-new
 EOF
 
 chown $TARGET_USER:$TARGET_USER /home/$TARGET_USER/.ssh/config
