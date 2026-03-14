@@ -29,20 +29,22 @@ else
     echo "Found UID 1000 user: $TARGET_USER"
 fi
 
-# Create SSH directory structure for target user
+# Create SSH directory structure for target user (may be overlaid by bind mount at runtime)
 echo "📁 Setting up SSH directory structure..."
 mkdir -p /home/$TARGET_USER/.ssh
 chown $TARGET_USER:$(id -gn $TARGET_USER) /home/$TARGET_USER/.ssh
 chmod 700 /home/$TARGET_USER/.ssh
 
-# Pre-populate known_hosts for common git providers (build-phase, before host mount overlays)
-echo "🔑 Pre-populating known_hosts for git providers..."
-ssh-keyscan github.com gitlab.com >> /home/$TARGET_USER/.ssh/known_hosts 2>/dev/null || true
+# Pre-populate known_hosts at SYSTEM level — survives bind mount overlay of ~/.ssh
+echo "🔑 Pre-populating system-wide known_hosts for git providers..."
+ssh-keyscan github.com gitlab.com >> /etc/ssh/ssh_known_hosts 2>/dev/null || true
 
-# Create SSH config for common git providers
-echo "⚙️  Creating SSH config..."
-cat > /home/$TARGET_USER/.ssh/config << 'EOF'
-# SSH config for git providers
+# Write SSH config to system-level config.d — survives bind mount overlay of ~/.ssh
+# Per-user ~/.ssh/config is overlaid by the host bind mount; system config persists.
+echo "⚙️  Creating system-wide SSH config..."
+mkdir -p /etc/ssh/ssh_config.d
+cat > /etc/ssh/ssh_config.d/90-devcontainer-git.conf << 'EOF'
+# Git provider SSH config (devcontainer feature: host-ssh-access)
 # accept-new: trust on first use, reject if host key changes (MITM protection)
 Host github.com
     HostName github.com
@@ -61,8 +63,7 @@ Host *
     StrictHostKeyChecking accept-new
 EOF
 
-chown $TARGET_USER:$(id -gn $TARGET_USER) /home/$TARGET_USER/.ssh/config
-chmod 600 /home/$TARGET_USER/.ssh/config
+chmod 644 /etc/ssh/ssh_config.d/90-devcontainer-git.conf
 
 # Create SSH test script for direct key usage
 echo "🧪 Creating SSH test script..."
